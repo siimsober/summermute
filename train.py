@@ -37,8 +37,10 @@ class CharRNN(nn.Module):
 # ---------- Load data ----------
 with open("data/training.txt", "r", encoding="utf-8", errors="ignore") as f:
     text = f.read()
+print("Data read.")
 
 dataset = CharDataset(text)
+print("Dataset initialized.")
 loader = DataLoader(dataset, batch_size=64, shuffle=True)
 
 model = CharRNN(len(dataset.chars))
@@ -46,7 +48,7 @@ optimizer = torch.optim.Adam(model.parameters(), lr=0.003)
 loss_fn = nn.CrossEntropyLoss()
 
 # ---------- Training ----------
-for epoch in range(10):  # small number for testing
+for epoch in range(1):  # small number for testing
     for x, y in loader:
         optimizer.zero_grad()
         out, _ = model(x)
