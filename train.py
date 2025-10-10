@@ -49,6 +49,7 @@ loss_fn = nn.CrossEntropyLoss()
 
 # ---------- Training ----------
 for epoch in range(1):  # small number for testing
+    print(f"Starting epoch {epoch+1}")
     for x, y in loader:
         optimizer.zero_grad()
         out, _ = model(x)
