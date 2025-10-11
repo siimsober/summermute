@@ -39,6 +39,6 @@ while True:
     
     if user_input.lower() in ["quit", "exit"]:
         break
-    response = model(torch.tensor([[float(user_input)]]))
-    print("sinu number + 1:", response.item())
+    response = model(torch.tensor([[float(ord(user_input[-1]))]]))
+    print("sinu number + 1:", chr(int(response.item())))
 
