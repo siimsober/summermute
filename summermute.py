@@ -1,47 +1,44 @@
 import torch
-import torch.nn as nn
 
-# ---------- Model ----------
-class CharRNN(nn.Module):
-    def __init__(self, vocab_size, hidden_size=128):
+class myNN(torch.nn.Module):
+    def __init__(self):
         super().__init__()
-        self.embed = nn.Embedding(vocab_size, hidden_size)
-        self.rnn = nn.LSTM(hidden_size, hidden_size, batch_first=True)
-        self.fc = nn.Linear(hidden_size, vocab_size)
+        self.linear = torch.nn.Linear(1, 1)
+        #with torch.no_grad():
+        #    self.linear.weight.fill_(1.0)
+        #    self.linear.bias.fill_(1.0)
 
-    def forward(self, x, hidden=None):
-        x = self.embed(x)
-        out, hidden = self.rnn(x, hidden)
-        out = self.fc(out)
-        return out, hidden
+    def forward(self, x):
+        return self.linear(x)
 
-checkpoint = torch.load("models/summermute.pt")
-chars = checkpoint["chars"]
-idx2char = {i:c for i,c in enumerate(chars)}
-char2idx = {c:i for i,c in enumerate(chars)}
+model = myNN()
 
-model = CharRNN(len(chars))
-model.load_state_dict(checkpoint["model_state_dict"])
-model.eval()
+# Define loss function (Mean Squared Error) and optimizer (Stochastic Gradient Descent)
+criterion = torch.nn.MSELoss()
+optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
 
-def get_response(prompt):
-    seq = [char2idx[c] for c in prompt]
-    hidden = None
-    for _ in range(200):
-        x = torch.tensor([seq[-25:]])
-        out, hidden = model(x, hidden)
-        next_idx = torch.argmax(out[0, -1]).item()
-        seq.append(next_idx)
-    return("".join(idx2char[i] for i in seq))
+# Generate training data: y = x + 1
+xs = torch.linspace(-10, 10, 100).unsqueeze(1)  # shape [100, 1]
+ys = xs + 1
+
+# Train for 500 epochs
+for epoch in range(5000):
+    print("Treenimine epohh 1")
+    # Forward pass
+    outputs = model(xs)
+    loss = criterion(outputs, ys)
+    print("kadu", loss)
+
+    # Backward pass
+    optimizer.zero_grad()
+    loss.backward()
+    optimizer.step()
 
 while True:
-    user_input = input("You: ")
+    user_input = input("Num: ")
     
     if user_input.lower() in ["quit", "exit"]:
         break
-    prompt = "User: " + user_input + "\nAI: "
-    response = get_response(prompt)[len(prompt):].strip()
-    print("Summermute:", response)
-
-
+    response = model(torch.tensor([[float(user_input)]]))
+    print("sinu number + 1:", response.item())
 
