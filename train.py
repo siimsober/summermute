@@ -13,8 +13,8 @@ class ByteDataset(Dataset):
         return len(self.data) - 1  # ✅ prevent out-of-range
 
     def __getitem__(self, idx):
-        x = torch.tensor([[float(self.data[idx])]])
-        y = torch.tensor([[float(self.data[idx+1])]])
+        x = torch.tensor(self.data[idx], dtype=torch.long)
+        y = torch.tensor(self.data[idx + 1], dtype=torch.long)
         return x, y
 
 # ---------- Load data ----------
@@ -28,14 +28,14 @@ print("Data read.")
 
 dataset = ByteDataset(text)
 print("Dataset initialized.")
-loader = DataLoader(dataset, batch_size=20000, shuffle=True)
+loader = DataLoader(dataset, batch_size=1000, shuffle=True)
 
 model = myNN()
-optimizer = torch.optim.Adam(model.parameters(), lr=0.003)
-loss_fn = nn.MSELoss()
+optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+loss_fn = nn.CrossEntropyLoss()
 
 # ---------- Training ----------
-for epoch in range(30):  # small number for testing
+for epoch in range(1):  # small number for testing
     print(f"Starting epoch {epoch+1}")
     for x, y in loader:
         optimizer.zero_grad()
