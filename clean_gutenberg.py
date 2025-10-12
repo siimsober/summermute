@@ -4,7 +4,7 @@ import os
 import chardet
 
 source_dir = "data/raw"
-output_file = "data/training.txt"    # cleaned output
+output_file = "data/training-eng.txt"    # cleaned output
 
 def clean_text(text):
     # Find the typical Gutenberg start and end markers
