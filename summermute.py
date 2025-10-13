@@ -5,7 +5,7 @@ from model import myNN
 
 # ---------- Command-line input ----------
 if len(sys.argv) < 2:
-    print("Usage: python train.py <est or eng>")
+    print("Usage: python summermute.py <est or eng>")
     sys.exit(1)
 
 model_file = f"models/summermute-{sys.argv[1]}.pt"
