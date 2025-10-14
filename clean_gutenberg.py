@@ -2,8 +2,9 @@
 # clean_gutenberg.py
 import os
 import chardet
+import re
 
-source_dir = "data/raw"
+source_dir = "data/raw/gutenberg"
 output_file = "data/training-eng.txt"    # cleaned output
 
 def clean_text(text):
@@ -17,11 +18,24 @@ def clean_text(text):
         text = text[:end_idx]
 
     # Optionally remove extra line breaks
-    text = "\n".join(line.strip() for line in text.splitlines() if line.strip())
+    #text = "\n".join(line.strip() for line in text.splitlines() if line.strip())
     return text
 
+def normalize_linebreaks(text: str) -> str:
+    # Normalize line endings to just '\n'
+    text = text.replace('\r\n', '\n').replace('\r', '\n')
+    
+    # Replace 2+ line breaks with a placeholder
+    text = re.sub(r'\n{2,}', '__PARA__', text)
+    # Remove remaining single line breaks
+    text = re.sub(r'\n', ' ', text)
+    # Restore paragraph breaks
+    text = text.replace('__PARA__', '\n')
+    
+    return text.strip()
+
 # Open the output file once in append mode
-with open(output_file, "w", encoding="utf-8") as out_f:
+with open(output_file, "w", encoding="utf-8", newline="\n") as out_f:
     for filename in os.listdir(source_dir):
         if not filename.lower().endswith(".txt"):
             continue
@@ -39,7 +53,7 @@ with open(output_file, "w", encoding="utf-8") as out_f:
             print(f"❌ Skipping {filename}, decode failed: {e}")
             continue
 
-        cleaned = clean_text(text)
+        cleaned = normalize_linebreaks(clean_text(text))
         if len(cleaned) < 500:  # skip tiny/empty files
             print(f"⚠️ Skipping {filename}, too short.")
             continue

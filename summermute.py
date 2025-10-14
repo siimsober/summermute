@@ -31,9 +31,10 @@ while True:
     if len(user_input) < context_len:
         user_input = (context_len * " ") + user_input
     
-    # Take the last two characters as context
-    context = [ord(c) for c in user_input[-context_len:]]
-    x = torch.tensor([context], dtype=torch.long)  # shape [1, context_len]
+    # Take the last characters as context
+    context_bytes = user_input.encode("utf-8")[-context_len:]
+    context = list(context_bytes)
+    x = torch.tensor([context], dtype=torch.long)
 
     generated = bytearray()
 
@@ -42,6 +43,9 @@ while True:
             logits = model(x)               # [1, 1, 256]
             pred = torch.argmax(logits, dim=-1).item()
             generated.append(pred)
-            x = torch.tensor([[x[0, 1].item(), x[0, 2].item(), x[0, 3].item(), pred]], dtype=torch.long)
+            # Shift context left and append new prediction
+            prev = x[0].tolist()[1:]  # drop first byte
+            prev.append(pred)         # add new predicted byte
+            x = torch.tensor([prev], dtype=torch.long)
 
     print("Generated:", generated.decode("utf-8", errors="replace"))

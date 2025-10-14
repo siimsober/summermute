@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 from model import myNN
+import time
 
 # ---------- Dataset ----------
 class ByteDataset(Dataset):
@@ -16,14 +17,15 @@ class ByteDataset(Dataset):
         return len(self.data) - self.context_len  # ✅ prevent out-of-range
 
     def __getitem__(self, idx):
-        # input: two consecutive bytes
         x = torch.tensor(self.data[idx:idx + self.context_len], dtype=torch.long)
-
-        # target: the next byte after those two
         y = torch.tensor(self.data[idx + self.context_len], dtype=torch.long)
 
         return x, y
 
+start_time = time.time()
+print(f"Training started at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(start_time))}")
+
+num_epochs = 40
 model = myNN()
 
 # ---------- Command-line input ----------
@@ -42,22 +44,28 @@ print(f"✅ Data read from {train_file}")
 
 dataset = ByteDataset(text, model.context_len)
 print("Dataset initialized.")
-loader = DataLoader(dataset, batch_size=500, shuffle=True)
+loader = DataLoader(dataset, batch_size=600, shuffle=True)
 
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
 loss_fn = nn.CrossEntropyLoss()
 
 # ---------- Training ----------
-for epoch in range(20):  # small number for testing
+for epoch in range(num_epochs):  # small number for testing
     print(f"Starting epoch {epoch+1}")
-    for x, y in loader:
+    for i, (x, y) in enumerate(loader):
+        #print(x, y)
         optimizer.zero_grad()
         out = model(x)
+        #print("out:", out)
         loss = loss_fn(out, y)
-        print(loss)
+        # print(epoch, loss)
         loss.backward()
         optimizer.step()
-    print(f"Epoch {epoch+1} loss={loss.item()}")
+        # Print every 10 batches
+        if i % 20 == 0:
+            print(f"Epoch {epoch+1}, batch {i}, loss={loss.item():.4f}")
+
+    print(f"Epoch {epoch+1} final loss={loss.item():.4f}")
 
 # ---------- Save model ----------
 print(model)
@@ -66,3 +74,12 @@ for name, param in model.named_parameters():
     print(param)  # prints the actual tensor values
 torch.save(model.state_dict(), model_name)
 print("Model saved to ", model_name)
+
+end_time = time.time()
+duration = end_time - start_time
+
+hours, rem = divmod(duration, 3600)
+minutes, seconds = divmod(rem, 60)
+
+print(f"Training completed at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time))}")
+print(f"Total duration: {int(hours)}h {int(minutes)}m {int(seconds)}s for {num_epochs} epochs")
