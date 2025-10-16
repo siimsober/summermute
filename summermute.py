@@ -4,18 +4,41 @@ import os
 import torch
 import torch.nn.functional as F
 from model import myNN
+from tokenizer import BPETokenizer
+import re
+import os
+
+# ---------- Vocab Finder ----------
+def find_latest_vocab_number(vocab_dir="data/vocab", lang="eng"):
+    """
+    Find the largest number XXX in vocab-{lang}-XXX.tsv files.
+    If none exist, return 0.
+    """
+    pattern = re.compile(rf"vocab-{re.escape(lang)}-(\d+)\.tsv$")
+    max_num = 0
+    for fname in os.listdir(vocab_dir):
+        match = pattern.match(fname)
+        if match:
+            num = int(match.group(1))
+            if num > max_num:
+                max_num = num
+    return max_num
 
 # ---------- Command-line input ----------
-if len(sys.argv) < 2:
+if len(sys.argv) < 3:
     print("Usage: python summermute.py <est or eng> <temperature>")
     sys.exit(1)
 
-model_file = f"models/summermute-{sys.argv[1]}.pt"
+lang = sys.argv[1]
+latest_num = find_latest_vocab_number("data/vocab", lang)
+vocab_path = f"data/vocab/vocab-{lang}-{latest_num}.tsv"
+model_file = f"models/summermute-{lang}.pt"
 if not os.path.exists(model_file):
     print(f"Model file not found: {model_file}")
     sys.exit(1)
 
-model = myNN()
+tokenizer = BPETokenizer(vocab_path)
+model = myNN(tokenizer.get_vocab_size())
 context_len = model.context_len
 
 model.load_state_dict(torch.load(model_file))
@@ -23,7 +46,8 @@ model.eval()
 print(f"Loaded model: {model_file}")
 
 temperature = float(sys.argv[2])  # >1 = more random, <1 = more confident
-max_gen = 200      # max generated characters
+print(f"Running at temp: {temperature}")
+max_gen = 200      # max generated tokens
 
 
 while True:
@@ -39,14 +63,19 @@ while True:
     
     # Take the last characters as context
     context_bytes = user_input.encode("utf-8")[-context_len:]
-    context = list(context_bytes)
+    context = tokenizer.encode(context_bytes)
+    # pad context to context_len tokens
+    if len(context) < context_len:
+        context = [0]*(context_len - len(context)) + context  # pad on left
+    else:
+        context = context[-context_len:]  # truncate to last 32 tokens
     x = torch.tensor([context], dtype=torch.long)
 
-    generated = bytearray()
+    generated = []
 
     with torch.no_grad():
         for _ in range(max_gen):  # generate 200 new characters
-            logits = model(x)               # [1, 1, 256]
+            logits = model(x)               
             logits = logits / temperature
 
             # Convert to probabilities
@@ -58,5 +87,5 @@ while True:
             prev = x[0].tolist()[1:]  # drop first byte
             prev.append(pred)         # add new predicted byte
             x = torch.tensor([prev], dtype=torch.long)
-
-    print("Generated:", generated.decode("utf-8", errors="replace"))
+    generated_bytes = tokenizer.decode(generated)
+    print("Generated:", generated_bytes.decode("utf-8", errors="replace"))

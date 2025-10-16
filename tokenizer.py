@@ -1,3 +1,4 @@
+# tokenizer.py
 import numpy as np
 
 class BPETokenizer:
@@ -93,4 +94,4 @@ class BPETokenizer:
         print(f"✅ Wrote {file} with {len(self.id_to_bytes)} tokens")
     
     def get_vocab_size(self):
-        return max(self.id_to_bytes.keys())
+        return max(self.id_to_bytes.keys()) + 1
