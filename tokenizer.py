@@ -91,3 +91,6 @@ class BPETokenizer:
                 repr_str = f"[{self.readable_repr(byte_seq)}]"
                 f.write(f"{token_id}\t{byte_str}\t{repr_str}\n")
         print(f"✅ Wrote {file} with {len(self.id_to_bytes)} tokens")
+    
+    def get_vocab_size(self):
+        return max(self.id_to_bytes.keys())
