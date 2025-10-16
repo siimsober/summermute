@@ -2,11 +2,12 @@
 import sys
 import os
 import torch
+import torch.nn.functional as F
 from model import myNN
 
 # ---------- Command-line input ----------
 if len(sys.argv) < 2:
-    print("Usage: python summermute.py <est or eng>")
+    print("Usage: python summermute.py <est or eng> <temperature>")
     sys.exit(1)
 
 model_file = f"models/summermute-{sys.argv[1]}.pt"
@@ -20,6 +21,10 @@ context_len = model.context_len
 model.load_state_dict(torch.load(model_file))
 model.eval()
 print(f"Loaded model: {model_file}")
+
+temperature = float(sys.argv[2])  # >1 = more random, <1 = more confident
+max_gen = 200      # max generated characters
+
 
 while True:
     user_input = input("Sisesta: ")
@@ -40,9 +45,14 @@ while True:
     generated = bytearray()
 
     with torch.no_grad():
-        for _ in range(200):  # generate 200 new characters
+        for _ in range(max_gen):  # generate 200 new characters
             logits = model(x)               # [1, 1, 256]
-            pred = torch.argmax(logits, dim=-1).item()
+            logits = logits / temperature
+
+            # Convert to probabilities
+            probs = F.softmax(logits, dim=-1)
+
+            pred = torch.multinomial(probs, num_samples=1).item()
             generated.append(pred)
             # Shift context left and append new prediction
             prev = x[0].tolist()[1:]  # drop first byte
