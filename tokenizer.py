@@ -33,7 +33,7 @@ class BPETokenizer:
                     break
             if not matched:
                 raise ValueError(f"No token found for byte sequence starting at index {i}: {data[i:i+10]}")
-        return np.array(token_ids, dtype=np.uint16)
+        return token_ids
     
     def decode(self, token_ids) -> bytes:
         """Turn token IDs back into raw bytes."""

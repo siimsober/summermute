@@ -40,10 +40,11 @@ if not os.path.exists(model_file):
 tokenizer = BPETokenizer(vocab_path)
 model = myNN(tokenizer.get_vocab_size())
 context_len = model.context_len
+print(f"Model context length: {context_len}")
 
 model.load_state_dict(torch.load(model_file))
 model.eval()
-print(f"Loaded model: {model_file}")
+print(f"Loaded model state: {model_file}")
 
 temperature = float(sys.argv[2])  # >1 = more random, <1 = more confident
 print(f"Running at temp: {temperature}")
@@ -58,17 +59,20 @@ while True:
         break
 
     # Need at least context length characters of context
-    if len(user_input) < context_len:
-        user_input = (context_len * " ") + user_input
+    if len(user_input) < 1:
+        user_input = " "
     
     # Take the last characters as context
-    context_bytes = user_input.encode("utf-8")[-context_len:]
+    context_bytes = user_input.encode("utf-8")
+    #print(context_bytes)
     context = tokenizer.encode(context_bytes)
+    #print(context)
     # pad context to context_len tokens
     if len(context) < context_len:
-        context = [0]*(context_len - len(context)) + context  # pad on left
+        context = [32]*(context_len - len(context)) + context  # pad with spaces on left
     else:
-        context = context[-context_len:]  # truncate to last 32 tokens
+        context = context[-context_len:]  # truncate to last context_len tokens
+    #print(context)
     x = torch.tensor([context], dtype=torch.long)
 
     generated = []
