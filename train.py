@@ -19,8 +19,8 @@ class ByteDataset(Dataset):
         return len(self.tokens) - self.context_len  # ✅ prevent out-of-range
 
     def __getitem__(self, idx):
-        x = self.tokens[idx:idx + self.context_len]
-        y = self.tokens[idx + self.context_len]
+        x = self.tokens[idx:idx + self.context_len] # self.tokens is torch.tensor(dtype=torch.long)
+        y = self.tokens[idx+1: idx+self.context_len+1]
         return x, y
 
 
@@ -61,7 +61,8 @@ if not os.path.exists(vocab_path):
     sys.exit(1)
 
 tokenizer = BPETokenizer(vocab_path)
-model = myNN(tokenizer.get_vocab_size())
+vocab_size = tokenizer.get_vocab_size()
+model = myNN(vocab_size)
 
 # ---------- Start timing ----------
 start_time = time.time()
@@ -72,7 +73,8 @@ with open(train_file, "rb") as f:
     data = f.read()
 print(f"✅ Read {len(data)} bytes from {train_file}")
 
-dataset = ByteDataset(tokenizer.encode(data), model.context_len)
+block_size = 64
+dataset = ByteDataset(tokenizer.encode(data), block_size)
 print(f"✅ Dataset initialized with {len(dataset)} samples")
 loader = DataLoader(dataset, batch_size=600, shuffle=True)
 
@@ -85,8 +87,8 @@ for epoch in range(num_epochs):
     total_loss = 0
     for i, (x, y) in enumerate(loader):
         optimizer.zero_grad()
-        out = model(x)
-        loss = loss_fn(out, y)
+        logits, _ = model(x)
+        loss = loss_fn(logits.view(-1, vocab_size), y.view(-1))
         loss.backward()
         optimizer.step()
         total_loss += loss.item()

@@ -39,8 +39,8 @@ if not os.path.exists(model_file):
 
 tokenizer = BPETokenizer(vocab_path)
 model = myNN(tokenizer.get_vocab_size())
-context_len = model.context_len
-print(f"Model context length: {context_len}")
+#context_len = model.context_len
+#print(f"Model context length: {context_len}")
 
 model.load_state_dict(torch.load(model_file))
 model.eval()
@@ -68,28 +68,27 @@ while True:
     context = tokenizer.encode(context_bytes)
     #print(context)
     # pad context to context_len tokens
-    if len(context) < context_len:
-        context = [32]*(context_len - len(context)) + context  # pad with spaces on left
-    else:
-        context = context[-context_len:]  # truncate to last context_len tokens
+    #if len(context) < context_len:
+    #    context = [32]*(context_len - len(context)) + context  # pad with spaces on left
+    #else:
+    #    context = context[-context_len:]  # truncate to last context_len tokens
     #print(context)
     x = torch.tensor([context], dtype=torch.long)
-
+    hidden = None
     generated = []
 
     with torch.no_grad():
-        for _ in range(max_gen):  # generate 200 new characters
-            logits = model(x)               
-            logits = logits / temperature
+        # First forward pass: process the whole input
+        logits, hidden = model(x, hidden)
 
-            # Convert to probabilities
-            probs = F.softmax(logits, dim=-1)
+        # Start generation from the last token
+        next_token = x[0, -1].unsqueeze(0).unsqueeze(0)
 
-            pred = torch.multinomial(probs, num_samples=1).item()
-            generated.append(pred)
-            # Shift context left and append new prediction
-            prev = x[0].tolist()[1:]  # drop first byte
-            prev.append(pred)         # add new predicted byte
-            x = torch.tensor([prev], dtype=torch.long)
+        for _ in range(max_gen):  # generate 200 new tokens
+            logits, hidden = model(next_token, hidden)               
+            probs = F.softmax(logits[:, -1, :] / temperature, dim=-1)
+            next_token = torch.multinomial(probs, num_samples=1)  # shape [1, 1]
+            generated.append(next_token.item())
+            
     generated_bytes = tokenizer.decode(generated)
     print("Generated:", generated_bytes.decode("utf-8", errors="replace"))
