@@ -3,7 +3,7 @@ import sys
 import os
 import torch
 import torch.nn.functional as F
-from model import myNN
+from s_model import myNN
 from tokenizer import BPETokenizer
 import re
 import os

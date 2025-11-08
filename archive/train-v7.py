@@ -4,7 +4,7 @@ import os
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
-from model import myNN
+from s_model import myNN
 import time
 
 # ---------- Dataset ----------

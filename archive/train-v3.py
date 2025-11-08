@@ -2,7 +2,7 @@
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
-from model import myNN
+from s_model import myNN
 
 # ---------- Dataset ----------
 class ByteDataset(Dataset):

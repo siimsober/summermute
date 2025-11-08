@@ -1,5 +1,5 @@
 import torch
-from model import myNN
+from s_model import myNN
 
 model = myNN()
 

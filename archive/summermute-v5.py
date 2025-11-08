@@ -1,7 +1,7 @@
 import sys
 import os
 import torch
-from model import myNN
+from s_model import myNN
 
 context_len = 2
 
