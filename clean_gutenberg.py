@@ -4,7 +4,7 @@ import os
 import chardet
 import re
 
-source_dir = "data/raw/gutenberg"
+source_dir = "data/raw/gutenberg/gutenberg_txt"
 output_file = "data/training-eng.txt"    # cleaned output
 
 def clean_text(text):
@@ -34,7 +34,7 @@ def normalize_linebreaks(text: str) -> str:
     
     return text.strip()
 
-# Open the output file once in append mode
+# Open the output file once
 with open(output_file, "w", encoding="utf-8", newline="\n") as out_f:
     for filename in os.listdir(source_dir):
         if not filename.lower().endswith(".txt"):
@@ -62,4 +62,4 @@ with open(output_file, "w", encoding="utf-8", newline="\n") as out_f:
         out_f.write(cleaned + "\n\n=== NEW BOOK ===\n\n")
         print(f"✅ Added {filename}")
 
-print("🎉 All files cleaned and appended to training.txt")
+print(f"🎉 All files cleaned and appended to {output_file}")

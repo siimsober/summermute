@@ -29,7 +29,7 @@ def clean_wikipedia_xml(text):
     return "\n".join([line for line in lines if line])
 
 with open("data/raw/etwiki-latest-pages-articles-xml/etwiki-latest-pages-articles.xml", encoding="utf-8", errors="ignore") as f:
-    raw = f.read(6_000_000)
+    raw = f.read(15_000_000)
 
 clean = clean_wikipedia_xml(raw)
 
