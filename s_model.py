@@ -7,7 +7,7 @@ class myNN(nn.Module):
     def __init__(self, vocab_size):
         super().__init__()
         self.vocab_size = vocab_size
-        self.embed_size = 32
+        self.embed_size = 64
         self.max_len = 256
 
         self.embed = nn.Embedding(vocab_size, self.embed_size)
@@ -15,6 +15,7 @@ class myNN(nn.Module):
 
         # trainable weights for fusing previous tokens
         self.fuse = nn.Parameter(torch.randn(self.max_len, self.max_len))
+        self.value = nn.Linear(self.embed_size, self.embed_size)  # learned V
 
         self.fc = nn.Linear(self.embed_size, vocab_size)
 
@@ -33,8 +34,10 @@ class myNN(nn.Module):
         fuse_weights = fuse_weights.masked_fill(mask == 0, float('-inf'))
         fuse_weights = F.softmax(fuse_weights, dim=-1)  # [T, T]
 
+        V = self.value(x)
+
         # fuse embeddings
-        context = fuse_weights @ x                    # [B, T, E]
+        context = fuse_weights @ V                    # [B, T, E]
 
         logits = self.fc(context)                     # [B, T, vocab_size]
         return logits
