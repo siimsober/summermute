@@ -62,6 +62,7 @@ if not os.path.exists(vocab_path):
 
 tokenizer = BPETokenizer(vocab_path)
 vocab_size = tokenizer.get_vocab_size()
+print(f"Tokenizer initialized with {vocab_size} token vocabulary.")
 model = myNN(vocab_size)
 total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
 print(f"Total trainable parameters: {total_params}")
