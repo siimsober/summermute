@@ -50,7 +50,7 @@ train_file = sys.argv[1]
 num_epochs = int(sys.argv[2])
 base = os.path.splitext(os.path.basename(train_file))[0]  # e.g. "training-eng"
 lang = base.split('-')[-1]
-model_name = f"models/summermute-{lang}.pt"  # "summermute-eng.pt"
+model_name = f"models/sumerute-{lang}.pt"  # "summermute-eng.pt"
 
 # ---------- Load vocab & model ----------
 latest_num = find_latest_vocab_number("data/vocab", lang)
@@ -63,6 +63,8 @@ if not os.path.exists(vocab_path):
 tokenizer = BPETokenizer(vocab_path)
 vocab_size = tokenizer.get_vocab_size()
 model = myNN(vocab_size)
+total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+print(f"Total trainable parameters: {total_params}")
 
 # ---------- Start timing ----------
 start_time = time.time()
@@ -77,6 +79,7 @@ block_size = 64
 dataset = ByteDataset(tokenizer.encode(data), block_size)
 print(f"✅ Dataset initialized with {len(dataset)} samples")
 loader = DataLoader(dataset, batch_size=600, shuffle=True)
+num_batches = len(loader)   # total batches per epoch
 
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
 loss_fn = nn.CrossEntropyLoss()
@@ -87,14 +90,15 @@ for epoch in range(num_epochs):
     total_loss = 0
     for i, (x, y) in enumerate(loader):
         optimizer.zero_grad()
-        logits, _ = model(x)
+        logits = model(x)
         loss = loss_fn(logits.view(-1, vocab_size), y.view(-1))
         loss.backward()
         optimizer.step()
         total_loss += loss.item()
 
-        if i % 20 == 0:
-            print(f"Batch {i}, loss={loss.item():.4f}")
+        if i % 50 == 0:
+            percent = (i / num_batches) * 100
+            print(f"Batch {i}/{num_batches} ({percent:.1f}%), loss={loss.item():.4f}")
 
     avg_loss = total_loss / len(loader)
     print(f"✅ Epoch {epoch + 1} complete. Avg loss={avg_loss:.4f}")

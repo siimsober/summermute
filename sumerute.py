@@ -32,13 +32,16 @@ if len(sys.argv) < 3:
 lang = sys.argv[1]
 latest_num = find_latest_vocab_number("data/vocab", lang)
 vocab_path = f"data/vocab/vocab-{lang}-{latest_num}.tsv"
-model_file = f"models/summermute-{lang}.pt"
+model_file = f"models/sumerute-{lang}.pt"
 if not os.path.exists(model_file):
     print(f"Model file not found: {model_file}")
     sys.exit(1)
 
 tokenizer = BPETokenizer(vocab_path)
 model = myNN(tokenizer.get_vocab_size())
+total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+print(f"Total trainable parameters: {total_params}")
+
 #context_len = model.context_len
 #print(f"Model context length: {context_len}")
 
@@ -74,18 +77,17 @@ while True:
     #    context = context[-context_len:]  # truncate to last context_len tokens
     #print(context)
     x = torch.tensor([context], dtype=torch.long)
-    hidden = None
     generated = []
 
     with torch.no_grad():
         # First forward pass: process the whole input
-        logits, hidden = model(x, hidden)
+        logits = model(x)
 
         # Start generation from the last token
         next_token = x[0, -1].unsqueeze(0).unsqueeze(0)
 
         for _ in range(max_gen):  # generate 200 new tokens
-            logits, hidden = model(next_token, hidden)               
+            logits = model(next_token)               
             probs = F.softmax(logits[:, -1, :] / temperature, dim=-1)
             next_token = torch.multinomial(probs, num_samples=1)  # shape [1, 1]
             generated.append(next_token.item())
