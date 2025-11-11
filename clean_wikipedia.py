@@ -33,5 +33,5 @@ with open("data/raw/etwiki-latest-pages-articles-xml/etwiki-latest-pages-article
 
 clean = clean_wikipedia_xml(raw)
 
-with open("data/training-est.txt", "w", encoding="utf-8") as f:
+with open("data/training-est.txt", "w", encoding="utf-8", newline="\n") as f:
     f.write(clean)

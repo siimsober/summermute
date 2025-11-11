@@ -64,6 +64,7 @@ for i in range(new_tokens):
     # Merge bytes for this pair
     pair_bytes = tokenizer.id_to_bytes[most_common_pair[0]] + tokenizer.id_to_bytes[most_common_pair[1]]
     print(f"Bytes: {pair_bytes}")
+    #print("build: ", repr(pair_bytes), type(pair_bytes))
     print(f"Readable: [{tokenizer.readable_repr(pair_bytes)}]")
 
     tokenizer.add_token(pair_bytes)

@@ -52,19 +52,31 @@ class BPETokenizer:
             20: "DC4", 21: "NAK", 22: "SYN", 23: "ETB", 24: "CAN", 25: "EM",
             26: "SUB", 27: "ESC", 28: "FS", 29: "GS", 30: "RS", 31: "US", 127: "DEL"
         }
+
+        if not isinstance(byte_seq, (bytes, bytearray)):
+            byte_seq = bytes(byte_seq)
+
+        try:
+            text = byte_seq.decode("utf-8")
+        except UnicodeDecodeError:
+            text = byte_seq
+
         parts = []
-        for b in byte_seq:
+        for c in text:
+            if isinstance(c, str):
+                b = ord(c)
+                ch = c
+            else:
+                b = c
+                ch = chr(c) if 32 <= c <= 127 else f"<0x{c:02X}>"
+
             if b in CONTROL_NAMES:
                 parts.append(f"<{CONTROL_NAMES[b]}>")
-            elif 33 <= b <= 126:
-                parts.append(chr(b))
+            elif 32 <= b <= 126 or b >= 160:
+                parts.append(ch)
             else:
-                # Try to decode as UTF-8 if part of valid multi-byte char
-                try:
-                    s = bytes([b]).decode("utf-8")
-                    parts.append(s)
-                except UnicodeDecodeError:
-                    parts.append(f"<0x{b:02X}>")
+                parts.append(f"<0x{b:02X}>")
+
         return "".join(parts)
     
     def add_token(self, byte_seq):
@@ -76,7 +88,7 @@ class BPETokenizer:
         new_id = max(self.id_to_bytes.keys()) + 1
         self.id_to_bytes[new_id] = byte_seq
         self.bytes_to_id[byte_seq] = new_id
-        print(f"Added token {new_id}: bytes={byte_seq}, readable={self.readable_repr(byte_seq)}")
+        #print(f"Added token {new_id}: bytes={byte_seq}, readable={self.readable_repr(byte_seq)}")
         return new_id
     
     def save(self, file):
