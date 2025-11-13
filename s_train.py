@@ -67,6 +67,10 @@ model = myNN(vocab_size)
 total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
 print(f"Total trainable parameters: {total_params}")
 
+device = "cuda" if torch.cuda.is_available() else "cpu"
+#device = "cpu"
+model.to(device)
+
 # ---------- Start timing ----------
 start_time = time.time()
 print(f"Training started at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(start_time))}")
@@ -76,7 +80,7 @@ with open(train_file, "rb") as f:
     data = f.read()
 print(f"✅ Read {len(data)} bytes from {train_file}")
 
-block_size = 64
+block_size = model.max_len
 dataset = ByteDataset(tokenizer.encode(data), block_size)
 print(f"✅ Dataset initialized with {len(dataset)} samples")
 loader = DataLoader(dataset, batch_size=600, shuffle=True)
@@ -90,6 +94,9 @@ for epoch in range(num_epochs):
     print(f"\n=== Epoch {epoch + 1}/{num_epochs} ===")
     total_loss = 0
     for i, (x, y) in enumerate(loader):
+        # ✅ move batch to device
+        x, y = x.to(device), y.to(device)
+
         optimizer.zero_grad()
         logits = model(x)
         loss = loss_fn(logits.view(-1, vocab_size), y.view(-1))
