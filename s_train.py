@@ -1,5 +1,6 @@
 # s_train.py
 import sys
+import argparse
 import os
 import re
 import csv
@@ -12,7 +13,7 @@ from s_model import myNN
 from tokenizer import BPETokenizer
 
 # ---------- Settings ----------
-MODEL_CONFIG = dict(embed_size=64, max_len=256, dropout=0.1, n_layers=2)
+MODEL_CONFIG = dict(embed_size=64, max_len=256, dropout=0.1, n_layers=2, n_heads=1, attn_proj=True)
 BATCH_SIZE = 128
 LR = 1e-3              # peak learning rate
 MIN_LR = 1e-4          # learning rate at the end of the cosine decay
@@ -105,19 +106,33 @@ def save_checkpoint(path, step, best_val):
 
 
 # ---------- Command-line input ----------
-if len(sys.argv) < 3:
-    print("Usage: python s_train.py <training_file> <steps> [--resume]")
-    sys.exit(1)
+parser = argparse.ArgumentParser(description="Train a sumerute model")
+parser.add_argument("train_file", help="e.g. data/training-eng.txt")
+parser.add_argument("steps", type=int, help="total training steps")
+parser.add_argument("--resume", action="store_true", help="continue from <out>/sumerute-<lang>-last.pt")
+parser.add_argument("--out", default="models", help="folder for checkpoints and log (default: models)")
+parser.add_argument("--layers", type=int, help=f"override n_layers (default {MODEL_CONFIG['n_layers']})")
+parser.add_argument("--heads", type=int, help=f"override n_heads (default {MODEL_CONFIG['n_heads']})")
+parser.add_argument("--no-proj", action="store_true", help="no output projection after attention")
+args = parser.parse_args()
 
-train_file = sys.argv[1]
-total_steps = int(sys.argv[2])
-resume = "--resume" in sys.argv[3:]
+train_file = args.train_file
+total_steps = args.steps
+resume = args.resume
 base = os.path.splitext(os.path.basename(train_file))[0]  # e.g. "training-eng"
 lang = base.split('-')[-1]
-model_name = f"models/sumerute-{lang}.pt"        # best validation loss, used by sumerute.py
-last_name = f"models/sumerute-{lang}-last.pt"    # latest step, used to resume
-log_name = f"models/sumerute-{lang}-log.csv"
-os.makedirs("models", exist_ok=True)
+model_name = f"{args.out}/sumerute-{lang}.pt"        # best validation loss, used by sumerute.py
+last_name = f"{args.out}/sumerute-{lang}-last.pt"    # latest step, used to resume
+log_name = f"{args.out}/sumerute-{lang}-log.csv"
+os.makedirs(args.out, exist_ok=True)
+
+model_config = dict(MODEL_CONFIG)
+if args.layers:
+    model_config["n_layers"] = args.layers
+if args.heads:
+    model_config["n_heads"] = args.heads
+if args.no_proj:
+    model_config["attn_proj"] = False
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -139,10 +154,11 @@ tokenizer = BPETokenizer(vocab_path)
 vocab_size = tokenizer.get_vocab_size()
 print(f"Tokenizer initialized from {vocab_path} with {vocab_size} token vocabulary.")
 
-config = checkpoint["config"] if checkpoint else dict(MODEL_CONFIG, vocab_path=vocab_path, vocab_size=vocab_size)
-model = myNN(vocab_size, config["embed_size"], config["max_len"], config["dropout"],
-             config.get("n_layers", 1)).to(device)
+config = checkpoint["config"] if checkpoint else dict(model_config, vocab_path=vocab_path, vocab_size=vocab_size)
+model = myNN.from_config(vocab_size, config).to(device)
 total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+print(f"Model: {config.get('n_layers', 1)} layers, {config.get('n_heads', 1)} heads, embed {config['embed_size']}, "
+      f"projection {'on' if config.get('attn_proj') else 'off'}")
 print(f"Total trainable parameters: {total_params}")
 
 # ---------- Data ----------

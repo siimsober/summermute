@@ -32,10 +32,11 @@ parser.add_argument("temperature", type=float, nargs="?", default=0.8,
 parser.add_argument("--top-k", type=int, default=40, help="sample only from the k most likely tokens, 0 = off")
 parser.add_argument("--top-p", type=float, default=0.95,
                     help="sample only from the most likely tokens covering this probability, 1 = off")
+parser.add_argument("--dir", default="models", help="folder with the model (default: models)")
 args = parser.parse_args()
 
 lang = args.lang
-model_file = f"models/sumerute-{lang}.pt"
+model_file = f"{args.dir}/sumerute-{lang}.pt"
 if not os.path.exists(model_file):
     print(f"Model file not found: {model_file}")
     sys.exit(1)
@@ -54,8 +55,7 @@ else:
     vocab_path = f"data/vocab/vocab-{lang}-{find_latest_vocab_number('data/vocab', lang)}.tsv"
 
 tokenizer = BPETokenizer(vocab_path)
-model = myNN(tokenizer.get_vocab_size(), config["embed_size"], config["max_len"], config["dropout"],
-             config.get("n_layers", 1))
+model = myNN.from_config(tokenizer.get_vocab_size(), config)
 total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
 print(f"Total trainable parameters: {total_params}, vocab {vocab_path}")
 
