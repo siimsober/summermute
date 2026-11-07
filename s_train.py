@@ -12,7 +12,7 @@ from s_model import myNN
 from tokenizer import BPETokenizer
 
 # ---------- Settings ----------
-MODEL_CONFIG = dict(embed_size=64, max_len=256, dropout=0.1, n_layers=1)
+MODEL_CONFIG = dict(embed_size=64, max_len=256, dropout=0.1, n_layers=2)
 BATCH_SIZE = 128
 LR = 1e-3              # peak learning rate
 MIN_LR = 1e-4          # learning rate at the end of the cosine decay

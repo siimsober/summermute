@@ -18,6 +18,23 @@ A small language model built from scratch to learn how LMs work, trained on Engl
 
 Newest first. Record what changed, why, and what was learned.
 
+### 2026-11-07 — Experiment: 2 layers (before 3c)
+- Only change: `n_layers=2` (embed 64, 1 head, 512 vocab). 173,824 params (+36%). 10k steps.
+
+| lang | layers | val loss | val bits/byte | train loss | time |
+|---|---|---|---|---|---|
+| est | 1 (baseline) | 3.504 | 2.757 | 3.492 | 6.2 min |
+| est | 2 | **3.374** | **2.655** | 3.390 | 10.0 min |
+| eng | 1 (baseline) | 3.357 | 2.430 | 3.385 | 6.2 min |
+| eng | 2 | **3.171** | **2.296** | 3.213 | 10.0 min |
+
+- −0.13 (est) and −0.19 (eng) val loss, 4–6% fewer bits per byte: a much bigger gain than the
+  parameter increase alone suggests. A second layer lets attention build on what the first found.
+- Still no overfitting (train ≈ val; train is slightly higher because of dropout).
+- English sample now has short grammatical stretches: "The friends were now borning the mathed
+  it that it was dance".
+- Baselines kept in `models/baseline-1x64/`; `models/sumerute-*.pt` are now the 2-layer models.
+
 ### 2026-11-07 — Causal mask as a buffer (plan step 3b)
 - Each `Block` builds its `max_len x max_len` bool mask once (`register_buffer`, `persistent=False`)
   and slices `[:T, :T]`, instead of building a float mask every forward pass.
