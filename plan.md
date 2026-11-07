@@ -47,7 +47,7 @@ Cheap and makes testing models nicer.
 Goal: lower val loss. Change one thing at a time and record each result.
 
 - [x] **`Block` class** (attention + MLP), stack `n_layers` of them. (3a)
-- [ ] **Multi-head attention** with an output projection after the heads.
+- [x] **Multi-head attention** with an output projection after the heads. (3c)
 - [ ] **Weight tying**: output layer shares weights with the token embedding.
 - [x] **Mask as `register_buffer`** instead of rebuilding it every forward pass. (3b)
 - [ ] **Mixed precision** on GPU (`torch.autocast`) for speed.

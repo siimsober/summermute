@@ -18,6 +18,31 @@ A small language model built from scratch to learn how LMs work, trained on Engl
 
 Newest first. Record what changed, why, and what was learned.
 
+### 2026-11-07 — Multi-head attention (plan step 3c)
+- `Block` splits Q/K/V into `n_heads` heads of `embed/n_heads` dims, each with its own attention
+  pattern; optional output projection `attn_proj` mixes the heads. Old checkpoints load as
+  1 head, no projection (identical outputs). New options: `s_train.py --layers --heads --no-proj --out`,
+  `sumerute.py --dir`. Runs now live in folders: `models/<layers>x<embed>-<heads>h/`.
+- All runs: embed 64, 512 vocab, 10k steps. 2-head runs include the projection, 1-head runs don't.
+
+| lang | layers x heads | params | val loss | bits/byte | time |
+|---|---|---|---|---|---|
+| est | 1 x 1 | 128k | 3.504 | 2.757 | 6.2 min |
+| est | 1 x 2 | 132k | 3.451 | 2.716 | 7.7 min |
+| est | 2 x 1 | 174k | 3.374 | 2.655 | 10.0 min |
+| est | 2 x 2 | 182k | **3.246** | **2.554** | 12.9 min |
+| eng | 1 x 1 | 128k | 3.357 | 2.430 | 6.2 min |
+| eng | 1 x 2 | 132k | 3.338 | 2.417 | 7.6 min |
+| eng | 2 x 1 | 174k | **3.171** | **2.296** | 10.0 min |
+| eng | 2 x 2 | 182k | 3.182 | 2.304 | 13.1 min |
+
+- Estonian gains clearly from 2 heads (−0.05 at 1 layer, −0.13 at 2 layers); English barely
+  (−0.02 at 1 layer, +0.01 at 2 layers, likely within run-to-run noise, which isn't measured yet).
+  Possibly Estonian's long words with endings need two things tracked at once; not proven.
+- Layers matter more than heads for English; for Estonian both help and add up.
+- 2 heads cost ~25–30% more time per step on the GTX 980 (reshapes), for +3% params.
+- Open: measure run-to-run noise (same config, different seed) before reading small differences.
+
 ### 2026-11-07 — Experiment: 2 layers (before 3c)
 - Only change: `n_layers=2` (embed 64, 1 head, 512 vocab). 173,824 params (+36%). 10k steps.
 
