@@ -27,7 +27,8 @@ def find_latest_vocab_number(vocab_dir="data/vocab", lang="eng"):
 # ---------- Command-line input ----------
 parser = argparse.ArgumentParser(description="Chat with a trained sumerute model")
 parser.add_argument("lang", choices=["est", "eng"])
-parser.add_argument("temperature", type=float, help=">1 = more random, <1 = more confident")
+parser.add_argument("temperature", type=float, nargs="?", default=0.8,
+                    help=">1 = more random, <1 = more confident (default 0.8)")
 parser.add_argument("--top-k", type=int, default=40, help="sample only from the k most likely tokens, 0 = off")
 parser.add_argument("--top-p", type=float, default=0.95,
                     help="sample only from the most likely tokens covering this probability, 1 = off")
