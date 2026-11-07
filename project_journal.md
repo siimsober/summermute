@@ -18,6 +18,16 @@ A small language model built from scratch to learn how LMs work, trained on Engl
 
 Newest first. Record what changed, why, and what was learned.
 
+### 2026-11-07 — English = Simple Wikipedia + Gutenberg
+- `data/training-eng.txt` is now Simple Wikipedia (12 MB) followed by Gutenberg (11.5 MB),
+  23.5 MB and 8,657 EOT segments. Rebuild with:
+  `python clean_wikipedia.py eng`, then
+  `cat data/training-eng.txt data/training-eng-gutenberg.txt > merged && mv merged data/training-eng.txt`.
+  (`clean_gutenberg.py` writes to `training-eng.txt`; rename its output to `training-eng-gutenberg.txt` first.)
+- Old vocabs to be deleted and rebuilt on this data.
+- Caveat: a validation split taken from the end of the file would be all Gutenberg. Sample
+  validation windows from across the file instead.
+
 ### 2026-11-07 — English data switched to Simple English Wikipedia
 - `python clean_wikipedia.py eng|est`. English source is the Simple English Wikipedia dump
   (`data/raw/simplewiki/simplewiki-latest-pages-articles.xml.bz2`, 360 MB, dump of 2026-11-02),
