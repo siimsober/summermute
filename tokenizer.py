@@ -1,4 +1,5 @@
 # tokenizer.py
+import re
 import numpy as np
 
 # End-of-text marker between books, chapters, articles and sections.
@@ -6,15 +7,38 @@ import numpy as np
 EOT_BYTE = b"\x04"
 EOT_ID = 4
 
-def merge_pair(tokens, a, b, new_id):
+# Text is split into chunks before BPE (like GPT-2/GPT-4) and merges never cross a chunk boundary,
+# so a word looks the same wherever it appears: ". This" is "." + " This", never ". T" + "his".
+PRETOKENIZE = re.compile(
+    r"'(?i:[sdmt]|ll|ve|re)"     # English contractions: 's 't 'm 'd 'll 've 're
+    r"| ?[^\W\d_]+"              # word with optional leading space, Unicode letters (õ ä ö ü)
+    r"| ?\d{1,3}"                # numbers, at most 3 digits per chunk
+    r"| ?(?:[^\s\w\x04]|_)+"     # punctuation with optional leading space
+    r"|\s+(?!\S)|\s+"            # whitespace; the last space before a word goes with the word
+    r"|\x04"                     # EOT is always alone
+)
+
+def chunk_starts(data: bytes) -> np.ndarray:
+    """Boolean array over the bytes of data, True where a pre-tokenizer chunk starts."""
+    text = data.decode("utf-8")
+    arr = np.frombuffer(data, dtype=np.uint8)
+    char_to_byte = np.flatnonzero((arr & 0xC0) != 0x80)   # byte offset of each character
+    char_starts = np.fromiter((m.start() for m in PRETOKENIZE.finditer(text)), dtype=np.int64)
+    starts = np.zeros(len(data), dtype=bool)
+    starts[char_to_byte[char_starts]] = True
+    return starts
+
+def merge_pair(tokens, starts, a, b, new_id):
     """
-    Replace every (a, b) in tokens with new_id, left to right without overlaps.
+    Replace every (a, b) in tokens with new_id, left to right without overlaps,
+    skipping pairs where b starts a new chunk.
     :param tokens: 1-D numpy array of token ids (not modified)
-    :return: (new tokens array, positions in the old array where a merge started)
+    :param starts: bool array, True where a token starts a chunk (not modified)
+    :return: (new tokens, new starts, positions in the old array where a merge started)
     """
-    pos = np.flatnonzero((tokens[:-1] == a) & (tokens[1:] == b))
+    pos = np.flatnonzero((tokens[:-1] == a) & (tokens[1:] == b) & ~starts[1:])
     if len(pos) == 0:
-        return tokens, pos
+        return tokens, starts, pos
     if a == b and len(pos) > 1:
         # In a run like "a a a" the match at i+1 overlaps the one at i: keep every other match per run
         idx = np.arange(len(pos))
@@ -26,7 +50,7 @@ def merge_pair(tokens, a, b, new_id):
     keep[pos + 1] = False
     out = tokens[keep]
     out[pos - np.arange(len(pos))] = new_id   # each earlier merge shifts later positions left by one
-    return out, pos
+    return out, starts[keep], pos
 
 
 class BPETokenizer:
@@ -60,14 +84,19 @@ class BPETokenizer:
                 return (a, b, token_id)
         raise ValueError(f"Token {token_id} {byte_seq} is not a merge of two earlier tokens")
 
-    def encode(self, data: bytes) -> np.ndarray:
-        """Translate input bytes to token IDs by applying the merges in the order they were learned."""
-        tokens = np.frombuffer(bytes(data), dtype=np.uint8).astype(np.int64)
+    def encode(self, data: bytes, return_starts=False):
+        """
+        Translate input bytes to token IDs by applying the merges in the order they were learned,
+        within pre-tokenizer chunks. Returns a numpy array (and the chunk starts if return_starts).
+        """
+        data = bytes(data)
+        tokens = np.frombuffer(data, dtype=np.uint8).astype(np.int64)
+        starts = chunk_starts(data)
         for a, b, new_id in self.merges:
             if len(tokens) < 2:
                 break
-            tokens, _ = merge_pair(tokens, a, b, new_id)
-        return tokens
+            tokens, starts, _ = merge_pair(tokens, starts, a, b, new_id)
+        return (tokens, starts) if return_starts else tokens
     
     def decode(self, token_ids) -> bytes:
         """Turn token IDs back into raw bytes."""

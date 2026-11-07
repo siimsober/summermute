@@ -18,6 +18,18 @@ A small language model built from scratch to learn how LMs work, trained on Engl
 
 Newest first. Record what changed, why, and what was learned.
 
+### 2026-11-07 — Pre-tokenize into words before BPE
+- Problem: merges across word boundaries made tokens like `. T`, so ". This" became `. T` + `his `
+  (the pronoun token) and every word had several spellings depending on what came before it.
+- Fix, like GPT-2/GPT-4: `PRETOKENIZE` in `tokenizer.py` splits text into chunks (word with
+  leading space, numbers of max 3 digits, punctuation, whitespace, contractions like `'s`, EOT alone)
+  and merges never cross a chunk boundary, in both `build_vocab.py` and `encode()`.
+- Result for eng 256: 1.99 bytes/token (2.01 before), first merges ` t`, ` a`, `he`, `in`, ` the`;
+  longest tokens ` American`, ` their`, ` which`. ". This is" -> `.` ` this`-style tokens.
+- Old cross-word vocab kept as `vocab-eng-256-crossword.tsv` for comparison (not picked up by
+  the scripts). Vocabs built before this change encode worse now, since their cross-word merges
+  no longer apply: rebuild them (est too).
+
 ### 2026-11-07 — Fast, textbook BPE
 - `encode()` now applies the merges in the order they were learned (textbook BPE) instead of
   greedy longest-match, so encoding matches how the vocab was trained. No 10-byte token limit.

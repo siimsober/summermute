@@ -25,18 +25,21 @@ def find_latest_vocab_number(vocab_dir="data/vocab", lang="eng"):
 # A pair (a, b) is stored as one int64 code a * PAIR_BASE + b
 PAIR_BASE = 1 << 20
 
-def count_pairs(tokens, starts):
-    """Count the pairs (tokens[s], tokens[s+1]) for the given start indices. EOT pairs are skipped."""
-    left = tokens[starts]
-    right = tokens[starts + 1]
-    ok = (left != EOT_ID) & (right != EOT_ID)   # EOT must stay a single token
+def count_pairs(tokens, chunk_start, idx):
+    """
+    Count the pairs (tokens[i], tokens[i+1]) for the given indices.
+    Pairs crossing a pre-tokenizer chunk boundary or containing EOT are skipped.
+    """
+    left = tokens[idx]
+    right = tokens[idx + 1]
+    ok = ~chunk_start[idx + 1] & (left != EOT_ID) & (right != EOT_ID)   # EOT must stay a single token
     codes, counts = np.unique(left[ok] * PAIR_BASE + right[ok], return_counts=True)
     return zip(codes.tolist(), counts.tolist())
 
 def neighbour_starts(positions, n):
     """Start indices of all pairs touching the given positions, within an array of length n."""
-    starts = np.unique(np.concatenate(positions))
-    return starts[(starts >= 0) & (starts <= n - 2)]
+    idx = np.unique(np.concatenate(positions))
+    return idx[(idx >= 0) & (idx <= n - 2)]
 
 
 if len(sys.argv) < 3:
@@ -68,35 +71,35 @@ with open(INPUT_FILE, "rb") as f:
 print(f"✅ Read {len(data)} bytes from {INPUT_FILE}")
 
 start_time = time.time()
-tokens = tokenizer.encode(data)
+tokens, starts = tokenizer.encode(data, return_starts=True)
 print(f"✅ Encoded with existing vocab: {len(tokens)} tokens ({len(data) / len(tokens):.2f} bytes/token)")
 
 # ---------- Count all pairs once ----------
-pair_counts = dict(count_pairs(tokens, np.arange(len(tokens) - 1)))
+pair_counts = dict(count_pairs(tokens, starts, np.arange(len(tokens) - 1)))
 print(f"✅ Counted {len(pair_counts)} distinct pairs in {time.time() - start_time:.1f}s")
 
 # ---------- Perform BPE merge iterations ----------
 # Each merge only updates the counts of pairs next to the merged positions
 for i in range(new_tokens):
-    best = max(pair_counts, key=pair_counts.get)
-    freq = pair_counts[best]
+    best = max(pair_counts, key=pair_counts.get) if pair_counts else None
+    freq = pair_counts[best] if pair_counts else 0
     if freq < 2:
         print("No pair occurs more than once, stopping early")
         break
     a, b = divmod(best, PAIR_BASE)
     new_id = tokenizer.add_merge(a, b)
 
-    old = tokens
-    tokens, pos = merge_pair(old, a, b, new_id)
+    old, old_starts = tokens, starts
+    tokens, starts, pos = merge_pair(old, old_starts, a, b, new_id)
 
     # Remove the old pairs that touched the merged tokens ...
-    for code, c in count_pairs(old, neighbour_starts([pos - 1, pos, pos + 1], len(old))):
+    for code, c in count_pairs(old, old_starts, neighbour_starts([pos - 1, pos, pos + 1], len(old))):
         pair_counts[code] -= c
         if pair_counts[code] == 0:
             del pair_counts[code]
     # ... and add the new pairs around each new token
     new_pos = pos - np.arange(len(pos))
-    for code, c in count_pairs(tokens, neighbour_starts([new_pos - 1, new_pos], len(tokens))):
+    for code, c in count_pairs(tokens, starts, neighbour_starts([new_pos - 1, new_pos], len(tokens))):
         pair_counts[code] = pair_counts.get(code, 0) + c
 
     readable = tokenizer.readable_repr(tokenizer.id_to_bytes[new_id])
