@@ -18,6 +18,20 @@ A small language model built from scratch to learn how LMs work, trained on Engl
 
 Newest first. Record what changed, why, and what was learned.
 
+### 2026-11-07 — EOT markers for variable-length output
+- Byte `0x04` (EOT, token id 4, `EOT_BYTE`/`EOT_ID` in `tokenizer.py`) marks the end of a text
+  segment. It goes at the start of the line that begins the next segment (`...\n\x04CHAPTER II`).
+- Where: after every book and article, before chapter headings (Gutenberg: CHAPTER/BOOK/PART/ACT/...
+  or roman numerals) and before top-level `==` sections (Wikipedia). Replaces `=== NEW BOOK ===`.
+- Minimum gap between EOTs (`MIN_CHAPTER` = 2000 chars, `MIN_SECTION` = 300) so table-of-contents
+  lines and empty sections don't each get one.
+- Not at every paragraph: that would teach "the next paragraph is unrelated" and would just
+  duplicate the `\n` signal. Stopping at the end of a paragraph can be done at generation time instead.
+- `build_vocab.py` never merges EOT with neighbours; `sumerute.py` stops generating on it.
+- Result: eng 413 segments (median ~15k chars, chapters are long), est 7,359 segments
+  (median ~840 chars).
+- Also strips more transcriber credit lines ("Transcribed from…", "Scanned by…", "This etext was prepared…").
+
 ### 2026-11-07 — Data cleaning fixes
 - Gutenberg: strip header/footer for both `THIS` and `THE PROJECT GUTENBERG EBOOK` marker variants
   (22 of 40 books were keeping the license boilerplate), drop the marker line itself, cut the

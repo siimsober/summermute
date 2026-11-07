@@ -1,6 +1,11 @@
 # tokenizer.py
 import numpy as np
 
+# End-of-text marker between books, chapters, articles and sections.
+# Byte 0x04 (EOT) never occurs in normal text and is token id 4 in the base vocab.
+EOT_BYTE = b"\x04"
+EOT_ID = 4
+
 class BPETokenizer:
     def __init__(self, vocab_tsv_path):
         # Load vocabulary file (id, bytes, text_repr, freq)

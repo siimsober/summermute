@@ -2,11 +2,15 @@
 import html
 import re
 import xml.etree.ElementTree as ET
+from tokenizer import EOT_BYTE
 
 source_file = "data/raw/etwiki-latest-pages-articles-xml/etwiki-latest-pages-articles.xml"
 output_file = "data/training-est.txt"
 MAX_BYTES = 12_000_000   # stop once this much clean text is written
 MIN_ARTICLE_LEN = 200    # skip stubs shorter than this
+MIN_SECTION = 300        # min chars between EOTs, short sections are merged into the next one
+EOT = EOT_BYTE.decode()
+SECTION = "\x00"         # temporary marker for top-level (==) section headings
 
 # Links into these namespaces are dropped entirely (files, categories)
 DROP_LINK_PREFIX = re.compile(
@@ -58,7 +62,8 @@ def clean_wikitext(text):
     text = re.sub(r"\[https?://[^\s\]]+\s+([^\]]*)\]", r"\1", text)  # [url text] -> text
     text = re.sub(r"\[https?://[^\]]*\]", "", text)                 # bare [url]
     text = re.sub(r"'{2,}", "", text)                               # bold / italic
-    text = re.sub(r"^=+\s*(.*?)\s*=+\s*$", r"\1", text, flags=re.M) # headings -> plain line
+    text = re.sub(r"^==\s*([^=].*?)\s*==\s*$", SECTION + r"\1", text, flags=re.M)  # sections
+    text = re.sub(r"^=+\s*(.*?)\s*=+\s*$", r"\1", text, flags=re.M) # subheadings -> plain line
     text = re.sub(r"^[*#:;]+\s*", "", text, flags=re.M)             # list markers
     text = re.sub(r"__[A-Z]+__", "", text)                          # magic words like __TOC__
 
@@ -68,11 +73,19 @@ def clean_wikitext(text):
     text = text.replace("()", "")
 
     lines = []
+    since_eot = 0
     for line in text.splitlines():
         line = line.strip()
+        if line.startswith(SECTION):
+            # EOT before a section heading, unless the text since the last EOT is too short
+            line = line[1:].strip()
+            if line and since_eot >= MIN_SECTION:
+                line = EOT + line
+                since_eot = 0
         if not line or line[0] in "|!{}[]":       # leftover table / template junk
             continue
         lines.append(line)
+        since_eot += len(line) + 1
     return "\n".join(lines)
 
 def local(tag):
@@ -105,7 +118,7 @@ with open(output_file, "w", encoding="utf-8", newline="\n") as out_f:
         if len(clean) < MIN_ARTICLE_LEN:
             continue
 
-        chunk = f"{title}\n{clean}\n\n"
+        chunk = f"{title}\n{clean}\n{EOT}"   # EOT after each article
         out_f.write(chunk)
         written += len(chunk.encode("utf-8"))
         articles += 1

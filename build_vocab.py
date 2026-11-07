@@ -2,7 +2,7 @@ import sys
 import collections
 import os
 import re
-from tokenizer import BPETokenizer
+from tokenizer import BPETokenizer, EOT_ID
 
 def find_latest_vocab_number(vocab_dir="data/vocab", lang="eng"):
     """
@@ -54,8 +54,10 @@ for i in range(new_tokens):
 
     token_ids = tokenizer.encode(data)
 
+    # EOT must stay a single token, so never merge it with neighbours
     pair_counts = collections.Counter(
         (token_ids[i], token_ids[i + 1]) for i in range(len(token_ids) - 1)
+        if EOT_ID not in (token_ids[i], token_ids[i + 1])
     )
 
     most_common_pair, freq = pair_counts.most_common(1)[0]

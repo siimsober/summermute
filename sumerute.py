@@ -4,7 +4,7 @@ import os
 import torch
 import torch.nn.functional as F
 from s_model import myNN
-from tokenizer import BPETokenizer
+from tokenizer import BPETokenizer, EOT_ID
 import re
 import os
 
@@ -86,7 +86,9 @@ while True:
             logits = model(x_input)
             probs = F.softmax(logits[:, -1, :] / temperature, dim=-1)
             next_token = torch.multinomial(probs, num_samples=1)
-            
+            if next_token.item() == EOT_ID:
+                break  # model ended the text
+
             # append to context for next iteration
             context = torch.cat([context, next_token], dim=1)
             generated.append(next_token.item())

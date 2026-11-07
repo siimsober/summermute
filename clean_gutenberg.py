@@ -3,6 +3,7 @@
 import os
 import chardet
 import re
+from tokenizer import EOT_BYTE
 
 source_dir = "data/raw/gutenberg/gutenberg_txt"
 output_file = "data/training-eng.txt"    # cleaned output
@@ -17,7 +18,16 @@ END_MARKERS = [
     re.compile(r"^\*{2,3} ?END OF (THE|THIS) PROJECT GUTENBERG E(BOOK|TEXT)", re.I | re.M),
     re.compile(r"^\s*End of (the |this )?(Project Gutenberg('s)? )?E-?(book|text)", re.I | re.M),
 ]
-PRODUCED_BY = re.compile(r"^\s*(Produced|Prepared|Transcribed) by[^\n]*(\n[^\n]+)*", re.I)
+# Transcriber credits paragraph at the top ("Produced by", "Transcribed from the 1916 ...", ...)
+PRODUCED_BY = re.compile(
+    r"^\s*((Produced|Prepared|Transcribed|Scanned)\b|This e-?text was prepared)[^\n]*(\n[^\n]+)*", re.I)
+
+EOT = EOT_BYTE.decode()
+MIN_CHAPTER = 2000   # min chars between EOTs, so table-of-contents headings don't each get one
+# Chapter headings, one paragraph per line after normalize_linebreaks
+CHAPTER_HEADING = re.compile(
+    r"^((CHAPTER|Chapter|BOOK|Book|PART|Part|ACT|STAVE|CANTO|LETTER|Letter)\b.{0,80}"
+    r"|[IVXLC]+\.?( [A-Z][A-Z ,.'-]*)?)$")
 
 def clean_text(text):
     text = text.replace('\r\n', '\n').replace('\r', '\n')
@@ -57,6 +67,18 @@ def normalize_linebreaks(text: str) -> str:
 
     return text.strip()
 
+def mark_chapters(text: str) -> str:
+    """Put an EOT before each chapter heading, at least MIN_CHAPTER chars apart."""
+    out = []
+    since_eot = 0
+    for line in text.split('\n'):
+        if CHAPTER_HEADING.match(line) and since_eot >= MIN_CHAPTER:
+            line = EOT + line
+            since_eot = 0
+        out.append(line)
+        since_eot += len(line) + 1
+    return "\n".join(out)
+
 # Open the output file once
 with open(output_file, "w", encoding="utf-8", newline="\n") as out_f:
     for filename in os.listdir(source_dir):
@@ -76,15 +98,15 @@ with open(output_file, "w", encoding="utf-8", newline="\n") as out_f:
             print(f"❌ Skipping {filename}, decode failed: {e}")
             continue
 
-        cleaned = normalize_linebreaks(clean_text(text))
+        cleaned = mark_chapters(normalize_linebreaks(clean_text(text)))
         if len(cleaned) < 500:  # skip tiny/empty files
             print(f"⚠️ Skipping {filename}, too short.")
             continue
         if "gutenberg" in cleaned.lower():
             print(f"⚠️ {filename} still mentions Gutenberg after cleaning")
 
-        # Add separator between books
-        out_f.write(cleaned + "\n\n=== NEW BOOK ===\n\n")
-        print(f"✅ Added {filename}")
+        # EOT after each book
+        out_f.write(cleaned + "\n" + EOT)
+        print(f"✅ Added {filename} ({cleaned.count(EOT) + 1} segments)")
 
 print(f"🎉 All files cleaned and appended to {output_file}")
