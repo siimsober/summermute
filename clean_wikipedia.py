@@ -1,11 +1,34 @@
 # clean_wikipedia.py
+import bz2
 import html
 import re
+import sys
 import xml.etree.ElementTree as ET
 from tokenizer import EOT_BYTE
 
-source_file = "data/raw/etwiki-latest-pages-articles-xml/etwiki-latest-pages-articles.xml"
-output_file = "data/training-est.txt"
+if len(sys.argv) < 2 or sys.argv[1] not in ("est", "eng"):
+    print("Usage: python clean_wikipedia.py <est|eng>")
+    sys.exit(1)
+lang = sys.argv[1]
+
+# est: Estonian Wikipedia, eng: Simple English Wikipedia
+SOURCES = {
+    "est": "data/raw/etwiki-latest-pages-articles-xml/etwiki-latest-pages-articles.xml",
+    "eng": "data/raw/simplewiki/simplewiki-latest-pages-articles.xml.bz2",
+}
+# Sections that are mostly references and lists, cut from here to the end
+TAIL_SECTION_NAMES = {
+    "est": "Viited|Märkused|Välislingid|Kirjandus|Vaata ka|Allikad",
+    "eng": "References|Notes|Other websites|External links|Related pages|See also|Sources|Further reading",
+}
+# Disambiguation page templates, those pages are skipped
+DISAMBIG = {
+    "est": ("{{täpsustus",),
+    "eng": ("{{disambig", "{{dab", "{{surname", "{{given name"),
+}
+
+source_file = SOURCES[lang]
+output_file = f"data/training-{lang}.txt"
 MAX_BYTES = 12_000_000   # stop once this much clean text is written
 MIN_ARTICLE_LEN = 200    # skip stubs shorter than this
 MIN_SECTION = 300        # min chars between EOTs, short sections are merged into the next one
@@ -17,9 +40,8 @@ DROP_LINK_PREFIX = re.compile(
     r"^\s*(file|image|fail|pilt|category|kategooria|media|meedia)\s*:", re.I)
 # Interlanguage links like [[en:Foo]]
 LANG_LINK = re.compile(r"^\s*[a-z]{2,3}(-[a-z]+)?\s*:", re.I)
-# Sections that are mostly references and lists, cut from here to the end
 TAIL_SECTIONS = re.compile(
-    r"^=+\s*(Viited|Märkused|Välislingid|Kirjandus|Vaata ka|Allikad)\s*=+\s*$", re.I | re.M)
+    rf"^=+\s*({TAIL_SECTION_NAMES[lang]})\s*=+\s*$", re.I | re.M)
 # Tags removed together with their content
 DROP_TAGS = re.compile(
     r"<(ref|gallery|math|timeline|syntaxhighlight|source|score|graph|mapframe|imagemap)\b[^>]*?"
@@ -94,7 +116,8 @@ def local(tag):
 written = 0
 articles = 0
 with open(output_file, "w", encoding="utf-8", newline="\n") as out_f:
-    for event, elem in ET.iterparse(source_file, events=("end",)):
+    source = bz2.open(source_file, "rb") if source_file.endswith(".bz2") else open(source_file, "rb")
+    for event, elem in ET.iterparse(source, events=("end",)):
         if local(elem.tag) != "page":
             continue
 
@@ -111,7 +134,7 @@ with open(output_file, "w", encoding="utf-8", newline="\n") as out_f:
         # Only real articles: main namespace, no redirects, no disambiguation pages
         if ns != "0" or "redirect" in fields or raw.lstrip().lower().startswith(("#redirect", "#suuna")):
             continue
-        if "{{täpsustus" in raw.lower():
+        if any(t in raw.lower() for t in DISAMBIG[lang]):
             continue
 
         clean = clean_wikitext(raw)

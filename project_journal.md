@@ -18,6 +18,18 @@ A small language model built from scratch to learn how LMs work, trained on Engl
 
 Newest first. Record what changed, why, and what was learned.
 
+### 2026-11-07 — English data switched to Simple English Wikipedia
+- `python clean_wikipedia.py eng|est`. English source is the Simple English Wikipedia dump
+  (`data/raw/simplewiki/simplewiki-latest-pages-articles.xml.bz2`, 360 MB, dump of 2026-11-02),
+  read straight from the .bz2.
+- Why: short sentences and common words suit a tiny model; same format and EOT density as the
+  Estonian data, so both models get comparable training text. Gutenberg chapters (~8k tokens)
+  were too long for the model to learn to stop.
+- Result: 12 MB, 2,642 articles, 8,244 segments (median ~825 chars). Only a few stray markup lines.
+- Gutenberg is still available: `clean_gutenberg.py` writes `data/training-eng.txt` too; the
+  last Gutenberg output was kept as `data/training-eng-gutenberg.txt`.
+- The 12 MB cap uses only a small part of the dump. Raise `MAX_BYTES` when the model grows.
+
 ### 2026-11-07 — EOT markers for variable-length output
 - Byte `0x04` (EOT, token id 4, `EOT_BYTE`/`EOT_ID` in `tokenizer.py`) marks the end of a text
   segment. It goes at the start of the line that begins the next segment (`...\n\x04CHAPTER II`).
