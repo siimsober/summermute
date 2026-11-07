@@ -18,6 +18,28 @@ A small language model built from scratch to learn how LMs work, trained on Engl
 
 Newest first. Record what changed, why, and what was learned.
 
+### 2026-11-07 — Measurable training + baselines (plan step 1)
+- `s_train.py <file> <steps> [--resume]`: random windows per step, AdamW (decay on weight matrices
+  only, betas 0.9/0.95), 200-step warmup + cosine to 1e-4, grad clip 1.0, batch 128 x 256.
+- Validation: every 20th block of 16k tokens (5%, spread over the file); 40 fixed batches, so
+  val loss is comparable between runs. Reports bits per byte (comparable across vocab sizes).
+- Checkpoints: `models/sumerute-{lang}.pt` = best val (used by `sumerute.py`),
+  `-last.pt` = latest (resume, also written on Ctrl+C), `-log.csv` = one row per eval.
+  Checkpoints hold the config incl. vocab path; `sumerute.py` uses it.
+- Tokens cached in `data/tokens-vocab-{lang}-{n}.npy`, re-encoded when data or vocab is newer.
+- Old pre-EOT models moved to `models/pre-eot/`.
+
+**Baselines** (1 block, 1 head, embed 64, 512 vocab, 128k params, 10k steps, ~6 min on GTX 980):
+
+| lang | train loss | val loss | val bits/byte |
+|---|---|---|---|
+| est | 3.492 | 3.504 | 2.757 |
+| eng | 3.385 | 3.357 | 2.430 |
+
+- Train ≈ val: no overfitting, the model is capacity-limited. Still improving slowly at 10k steps.
+- Samples: English is word-like with real short words and broken long ones ("Abo the chountry was
+  who was team."); Estonian stops early on EOT. Next: scale the model (plan step 3).
+
 ### 2026-11-07 — Pre-tokenize into words before BPE
 - Problem: merges across word boundaries made tokens like `. T`, so ". This" became `. T` + `his `
   (the pronoun token) and every word had several spellings depending on what came before it.

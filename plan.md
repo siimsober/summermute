@@ -16,20 +16,20 @@ Step 1 fixes that, and every later step is judged by its numbers.
 
 Goal: a baseline validation loss for the current model, for both languages.
 
-- [ ] **Cache encoded tokens**: save `data/tokens-{lang}-{vocab}.npy` after encoding, reuse if the
+- [x] **Cache encoded tokens**: save `data/tokens-{lang}-{vocab}.npy` after encoding, reuse if the
       vocab hasn't changed (encoding 23.5 MB takes ~30 s, more with bigger vocabs).
-- [ ] **Validation split**: hold out ~5% spread across the file (e.g. every 20th block of 64k tokens),
+- [x] **Validation split**: hold out ~5% spread across the file (e.g. every 20th block of 64k tokens),
       not the end. The end of the eng file is all Gutenberg.
-- [ ] **Step-based training**: random windows of `context_len` tokens per batch, train for N steps
+- [x] **Step-based training**: random windows of `context_len` tokens per batch, train for N steps
       instead of epochs.
-- [ ] **Evaluate every N steps**: mean val loss over a fixed set of batches, printed with train loss.
-- [ ] **Report bits per byte** too: `loss / ln(2) * tokens / bytes`. Token-level loss can't be
+- [x] **Evaluate every N steps**: mean val loss over a fixed set of batches, printed with train loss.
+- [x] **Report bits per byte** too: `loss / ln(2) * tokens / bytes`. Token-level loss can't be
       compared across vocab sizes, bits per byte can.
-- [ ] **Checkpoints**: save model, optimizer, step, config (vocab path, sizes) every N steps and
+- [x] **Checkpoints**: save model, optimizer, step, config (vocab path, sizes) every N steps and
       on best val loss. Ctrl+C keeps the latest one, and training can resume.
-- [ ] **Optimizer**: AdamW, short warmup then cosine decay, gradient clipping at 1.0.
-- [ ] **Log to CSV** (step, train loss, val loss, lr, time) so runs can be plotted and compared.
-- [ ] **`sumerute.py` loads the config from the checkpoint** instead of relying on matching
+- [x] **Optimizer**: AdamW, short warmup then cosine decay, gradient clipping at 1.0.
+- [x] **Log to CSV** (step, train loss, val loss, lr, time) so runs can be plotted and compared.
+- [x] **`sumerute.py` loads the config from the checkpoint** instead of relying on matching
       defaults, and uses `map_location` so a GPU-trained model loads on CPU.
 
 Done when: the journal has baseline val loss / bits per byte for eng and est with the current model.

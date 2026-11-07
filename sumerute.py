@@ -26,26 +26,34 @@ def find_latest_vocab_number(vocab_dir="data/vocab", lang="eng"):
 
 # ---------- Command-line input ----------
 if len(sys.argv) < 3:
-    print("Usage: python summermute.py <est or eng> <temperature>")
+    print("Usage: python sumerute.py <est or eng> <temperature>")
     sys.exit(1)
 
 lang = sys.argv[1]
-latest_num = find_latest_vocab_number("data/vocab", lang)
-vocab_path = f"data/vocab/vocab-{lang}-{latest_num}.tsv"
 model_file = f"models/sumerute-{lang}.pt"
 if not os.path.exists(model_file):
     print(f"Model file not found: {model_file}")
     sys.exit(1)
 
+checkpoint = torch.load(model_file, map_location="cpu")
+if "config" in checkpoint:
+    # Checkpoint from s_train.py: model sizes and the vocab it was trained with
+    config = checkpoint["config"]
+    state = checkpoint["model"]
+    vocab_path = config["vocab_path"]
+    print(f"Checkpoint from step {checkpoint['step']}, val loss {checkpoint['best_val']:.4f}")
+else:
+    # Older files are a bare state_dict with default sizes and the latest vocab
+    config = dict(embed_size=64, max_len=256, dropout=0.1)
+    state = checkpoint
+    vocab_path = f"data/vocab/vocab-{lang}-{find_latest_vocab_number('data/vocab', lang)}.tsv"
+
 tokenizer = BPETokenizer(vocab_path)
-model = myNN(tokenizer.get_vocab_size())
+model = myNN(tokenizer.get_vocab_size(), config["embed_size"], config["max_len"], config["dropout"])
 total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-print(f"Total trainable parameters: {total_params}")
+print(f"Total trainable parameters: {total_params}, vocab {vocab_path}")
 
-#context_len = model.context_len
-#print(f"Model context length: {context_len}")
-
-model.load_state_dict(torch.load(model_file))
+model.load_state_dict(state)
 model.eval()
 print(f"Loaded model state: {model_file}")
 
