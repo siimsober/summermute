@@ -18,6 +18,16 @@ A small language model built from scratch to learn how LMs work, trained on Engl
 
 Newest first. Record what changed, why, and what was learned.
 
+### 2026-11-07 — Fast, textbook BPE
+- `encode()` now applies the merges in the order they were learned (textbook BPE) instead of
+  greedy longest-match, so encoding matches how the vocab was trained. No 10-byte token limit.
+- Vocab TSVs have a 4th `merge` column (`a,b` = the two token ids merged). Old files without it
+  still load; the pair is worked out from the bytes.
+- `build_vocab.py` counts pairs once, then each merge only updates the counts next to the merged
+  positions (numpy, `merge_pair` in `tokenizer.py`). Checked against a full recount for 300 merges.
+- Speed: 256 merges on 23.5 MB eng took 27 s (old version: ~45 s per merge, ~3 h).
+- `vocab-eng-256.tsv`: 512 tokens, 2.01 bytes/token. Larger vocabs (2k+) are now practical.
+
 ### 2026-11-07 — English = Simple Wikipedia + Gutenberg
 - `data/training-eng.txt` is now Simple Wikipedia (12 MB) followed by Gutenberg (11.5 MB),
   23.5 MB and 8,657 EOT segments. Rebuild with:

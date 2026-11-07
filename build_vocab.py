@@ -1,8 +1,9 @@
 import sys
-import collections
 import os
 import re
-from tokenizer import BPETokenizer, EOT_ID
+import time
+import numpy as np
+from tokenizer import BPETokenizer, EOT_ID, merge_pair
 
 def find_latest_vocab_number(vocab_dir="data/vocab", lang="eng"):
     """
@@ -20,8 +21,26 @@ def find_latest_vocab_number(vocab_dir="data/vocab", lang="eng"):
     return max_num
 
 
+# ---------- Pair counting ----------
+# A pair (a, b) is stored as one int64 code a * PAIR_BASE + b
+PAIR_BASE = 1 << 20
+
+def count_pairs(tokens, starts):
+    """Count the pairs (tokens[s], tokens[s+1]) for the given start indices. EOT pairs are skipped."""
+    left = tokens[starts]
+    right = tokens[starts + 1]
+    ok = (left != EOT_ID) & (right != EOT_ID)   # EOT must stay a single token
+    codes, counts = np.unique(left[ok] * PAIR_BASE + right[ok], return_counts=True)
+    return zip(codes.tolist(), counts.tolist())
+
+def neighbour_starts(positions, n):
+    """Start indices of all pairs touching the given positions, within an array of length n."""
+    starts = np.unique(np.concatenate(positions))
+    return starts[(starts >= 0) & (starts <= n - 2)]
+
+
 if len(sys.argv) < 3:
-    print("Usage: python make_vocab.py <est|eng> <number of tokens to add>")
+    print("Usage: python build_vocab.py <est|eng> <number of tokens to add>")
     sys.exit(1)
 
 lang = sys.argv[1]
@@ -48,28 +67,43 @@ with open(INPUT_FILE, "rb") as f:
     data = f.read()
 print(f"✅ Read {len(data)} bytes from {INPUT_FILE}")
 
+start_time = time.time()
+tokens = tokenizer.encode(data)
+print(f"✅ Encoded with existing vocab: {len(tokens)} tokens ({len(data) / len(tokens):.2f} bytes/token)")
+
+# ---------- Count all pairs once ----------
+pair_counts = dict(count_pairs(tokens, np.arange(len(tokens) - 1)))
+print(f"✅ Counted {len(pair_counts)} distinct pairs in {time.time() - start_time:.1f}s")
+
 # ---------- Perform BPE merge iterations ----------
+# Each merge only updates the counts of pairs next to the merged positions
 for i in range(new_tokens):
-    print(f"\n--- Merge iteration {i + 1}/{new_tokens} ---")
+    best = max(pair_counts, key=pair_counts.get)
+    freq = pair_counts[best]
+    if freq < 2:
+        print("No pair occurs more than once, stopping early")
+        break
+    a, b = divmod(best, PAIR_BASE)
+    new_id = tokenizer.add_merge(a, b)
 
-    token_ids = tokenizer.encode(data)
+    old = tokens
+    tokens, pos = merge_pair(old, a, b, new_id)
 
-    # EOT must stay a single token, so never merge it with neighbours
-    pair_counts = collections.Counter(
-        (token_ids[i], token_ids[i + 1]) for i in range(len(token_ids) - 1)
-        if EOT_ID not in (token_ids[i], token_ids[i + 1])
-    )
+    # Remove the old pairs that touched the merged tokens ...
+    for code, c in count_pairs(old, neighbour_starts([pos - 1, pos, pos + 1], len(old))):
+        pair_counts[code] -= c
+        if pair_counts[code] == 0:
+            del pair_counts[code]
+    # ... and add the new pairs around each new token
+    new_pos = pos - np.arange(len(pos))
+    for code, c in count_pairs(tokens, neighbour_starts([new_pos - 1, new_pos], len(tokens))):
+        pair_counts[code] = pair_counts.get(code, 0) + c
 
-    most_common_pair, freq = pair_counts.most_common(1)[0]
-    print(f"Most frequent pair: {most_common_pair} (count={freq})")
+    readable = tokenizer.readable_repr(tokenizer.id_to_bytes[new_id])
+    print(f"Merge {i + 1}/{new_tokens}: ({a}, {b}) -> {new_id} [{readable}] count={freq}")
 
-    # Merge bytes for this pair
-    pair_bytes = tokenizer.id_to_bytes[most_common_pair[0]] + tokenizer.id_to_bytes[most_common_pair[1]]
-    print(f"Bytes: {pair_bytes}")
-    #print("build: ", repr(pair_bytes), type(pair_bytes))
-    print(f"Readable: [{tokenizer.readable_repr(pair_bytes)}]")
-
-    tokenizer.add_token(pair_bytes)
+print(f"✅ {len(tokens)} tokens after merges ({len(data) / len(tokens):.2f} bytes/token), "
+      f"{time.time() - start_time:.1f}s")
 
 # ---------- Save new vocab ----------
 tokenizer.save(VOCAB_OUT)

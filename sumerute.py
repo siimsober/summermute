@@ -76,7 +76,7 @@ while True:
     #else:
     #    context = context[-context_len:]  # truncate to last context_len tokens
     #print(context)
-    context = torch.tensor([context], dtype=torch.long)  # initial input
+    context = torch.tensor(context, dtype=torch.long)[None, :]  # initial input [1, T]
     generated = []
 
     with torch.no_grad():
