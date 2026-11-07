@@ -27,7 +27,11 @@ Newest first. Record what changed, why, and what was learned.
   forms via endings), capital after „ in direct speech, one paragraph + EOT per story.
 - 57 stories, 5,214 words, 36 KB: ~0.3% of the est Wikipedia data. Mixed in once it would barely
   register; options are repeating it or a short final training phase on simple text.
-- `aabits_veelgi_lihtsam_.pdf` is the same text split into syllables (SU-VI ON TO-RE), not used.
+- Source switched to `aabits_veelgi_lihtsam_.pdf`: the same text split into syllables
+  (SU-VI ON TO-RE), but with typos fixed (vanaisa, garderoobis, paljud pered, alt, pintsak).
+  Since all hyphens between letters are removed, the syllable split doesn't matter.
+- `FIXES` in `clean_aabits.py` for typos in both PDFs: klegutama -> kelgutama, j aksa -> jaksa,
+  soovides t aru -> soovidest aru, mixed dashes. Spaced hyphens become en dashes.
 
 ### 2026-11-08 — Vocab 512 merges (768 tokens)
 - `vocab-{eng,est}-512.tsv`: 256 more merges on top of 256. eng 2.28 bytes/token (was 1.99),

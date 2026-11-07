@@ -8,7 +8,9 @@ import shutil
 import subprocess
 from tokenizer import EOT_BYTE
 
-source_file = "data/raw/aabits.pdf"
+# The syllable version (SU-VI ON TO-RE) has the same text with typos fixed (vanaisa, garderoobis,
+# paljud pered); all hyphens between letters get removed anyway.
+source_file = "data/raw/aabits_veelgi_lihtsam_.pdf"
 output_file = "data/aabits-est.txt"   # "-est" so s_train.py uses the Estonian vocab
 EOT = EOT_BYTE.decode()
 
@@ -28,6 +30,14 @@ NAMES = {
     "Eesti", "Pärnu", "Pariis", "Ukraina", "Aasia", "Filipiinid", "Gröönimaa", "Lapimaa",
     "Galapagos", "Piusa", "Audi", "Škoda",
 }
+# Typos in the book itself, fixed after the hyphens are removed (plain text replacement)
+FIXES = {
+    "KLEGUTAMA": "KELGUTAMA",
+    "J AKSA": "JAKSA",                       # space inside the word
+    "SOOVIDES T ARU": "SOOVIDEST ARU",       # space in the wrong place
+    "AI -AI - AI": "AI – AI – AI",            # inconsistent dashes
+}
+
 NAME_ENDINGS = {"", "i", "t", "l", "le", "lt", "ga", "st", "s", "sse", "ni", "ks", "il", "ile",
                 "ilt", "iga", "ist", "is", "isse", "iks", "de", "dele", "dest"}
 
@@ -62,6 +72,9 @@ raw = pdf_to_text(source_file).replace("\f", "\n")
 # Dashes with spaces around them (KALLI – KALLI) are punctuation and stay.
 text = re.sub(r"(?<=[^\W\d_])-\n(?=[^\W\d_])", "", raw)
 text = re.sub(r"(?<=[^\W\d_])-(?=[^\W\d_])", "", text)
+for wrong, right in FIXES.items():
+    text = text.replace(wrong, right)
+text = text.replace(" - ", " – ")   # one dash style: TUUT - TUUT -> TUUT – TUUT
 
 # Stories are separated by blank lines; lines inside a story are joined into one paragraph.
 stories = [" ".join(line.strip() for line in block.splitlines() if line.strip())
