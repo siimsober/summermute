@@ -18,6 +18,29 @@ A small language model built from scratch to learn how LMs work, trained on Engl
 
 Newest first. Record what changed, why, and what was learned.
 
+### 2026-11-08 — Vocab 512 merges (768 tokens)
+- `vocab-{eng,est}-512.tsv`: 256 more merges on top of 256. eng 2.28 bytes/token (was 1.99),
+  est 2.10 (was 1.85). A 256-token window now covers ~14% more text.
+- Same 4 shapes as before, 10k steps; 1-head runs without projection, 2-head runs with it.
+  Folders `models/v512-<layers>x64-<heads>h/`. Comparison in bits per byte:
+
+| lang | layers x heads | bpb vocab 256 | bpb vocab 512 | change | params (512) |
+|---|---|---|---|---|---|
+| est | 1 x 1 | 2.757 | 2.643 | −0.114 | 161k |
+| est | 1 x 2 | 2.716 | 2.614 | −0.102 | 165k |
+| est | 2 x 1 | 2.655 | 2.520 | −0.135 | 207k |
+| est | 2 x 2 | 2.554 | **2.505** | −0.049 | 215k |
+| eng | 1 x 1 | 2.430 | 2.289 | −0.142 | 161k |
+| eng | 1 x 2 | 2.417 | 2.277 | −0.140 | 165k |
+| eng | 2 x 1 | 2.296 | 2.209 | −0.087 | 207k |
+| eng | 2 x 2 | 2.304 | **2.196** | −0.107 | 215k |
+
+- The bigger vocab helps every shape, by 0.05–0.14 bits/byte, for only ~5% more time per run.
+  The extra 33k params are all in the embedding and output layers.
+- With vocab 512, 2 heads help English a little (2.209 -> 2.196) and Estonian much less than
+  before (2.520 -> 2.505). Differences this small still need the run-to-run noise measured.
+- Still no overfitting (train ≈ val).
+
 ### 2026-11-07 — Multi-head attention (plan step 3c)
 - `Block` splits Q/K/V into `n_heads` heads of `embed/n_heads` dims, each with its own attention
   pattern; optional output projection `attn_proj` mixes the heads. Old checkpoints load as
