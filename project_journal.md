@@ -29,6 +29,9 @@ Newest first. Record what changed, why, and what was learned.
 - Old cross-word vocab kept as `vocab-eng-256-crossword.tsv` for comparison (not picked up by
   the scripts). Vocabs built before this change encode worse now, since their cross-word merges
   no longer apply: rebuild them (est too).
+- est 256 rebuilt from `vocab-est-0`: 1.85 bytes/token, 19 s. `ä` and `õ` became whole-character
+  tokens within the first 10 merges; longest tokens ` aastal`, ` maakond`, ` mille`.
+  Old est vocabs (1, 3, 128) moved to `data/vocab/old/`.
 
 ### 2026-11-07 — Fast, textbook BPE
 - `encode()` now applies the merges in the order they were learned (textbook BPE) instead of
