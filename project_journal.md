@@ -18,6 +18,17 @@ A small language model built from scratch to learn how LMs work, trained on Engl
 
 Newest first. Record what changed, why, and what was learned.
 
+### 2026-11-08 — Simple Estonian: aabits
+- No Simple Estonian Wikipedia exists, and no open children's-text corpus was found (ENC is mostly
+  web text; the fiction corpus is adult). Source: a simplified first-reader PDF in `data/raw/`
+  (Vaiksoo, Toomla, Ilves "Aabits", simplified by Kadrian Hiie). Copyrighted: private use only.
+- `clean_aabits.py` -> `data/aabits-est.txt`: pdftotext, join compound hyphens (HEINA-MAA ->
+  heinamaa) and line-end splits, all-caps -> sentence case with a hand-made name list (inflected
+  forms via endings), capital after „ in direct speech, one paragraph + EOT per story.
+- 57 stories, 5,214 words, 36 KB: ~0.3% of the est Wikipedia data. Mixed in once it would barely
+  register; options are repeating it or a short final training phase on simple text.
+- `aabits_veelgi_lihtsam_.pdf` is the same text split into syllables (SU-VI ON TO-RE), not used.
+
 ### 2026-11-08 — Vocab 512 merges (768 tokens)
 - `vocab-{eng,est}-512.tsv`: 256 more merges on top of 256. eng 2.28 bytes/token (was 1.99),
   est 2.10 (was 1.85). A 256-token window now covers ~14% more text.
