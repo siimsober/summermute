@@ -7,31 +7,54 @@ import re
 source_dir = "data/raw/gutenberg/gutenberg_txt"
 output_file = "data/training-eng.txt"    # cleaned output
 
-def clean_text(text):
-    # Find the typical Gutenberg start and end markers
-    start_idx = text.find("*** START OF THIS PROJECT GUTENBERG EBOOK")
-    if start_idx != -1:
-        text = text[start_idx + 1:]
-    
-    end_idx = text.find("*** END OF THIS PROJECT GUTENBERG EBOOK")
-    if end_idx != -1:
-        text = text[:end_idx]
+# Header ends at the end of one of these lines (modern / old "Small Print" etexts)
+START_MARKERS = [
+    re.compile(r"^\*{2,3} ?START OF (THE|THIS) PROJECT GUTENBERG E(BOOK|TEXT).*$", re.I | re.M),
+    re.compile(r"^\*END\*THE SMALL PRINT!.*$", re.I | re.M),
+]
+# Footer starts at the first of these lines after the header
+END_MARKERS = [
+    re.compile(r"^\*{2,3} ?END OF (THE|THIS) PROJECT GUTENBERG E(BOOK|TEXT)", re.I | re.M),
+    re.compile(r"^\s*End of (the |this )?(Project Gutenberg('s)? )?E-?(book|text)", re.I | re.M),
+]
+PRODUCED_BY = re.compile(r"^\s*(Produced|Prepared|Transcribed) by[^\n]*(\n[^\n]+)*", re.I)
 
-    # Optionally remove extra line breaks
-    #text = "\n".join(line.strip() for line in text.splitlines() if line.strip())
+def clean_text(text):
+    text = text.replace('\r\n', '\n').replace('\r', '\n')
+
+    # Cut the license header
+    for marker in START_MARKERS:
+        m = marker.search(text)
+        if m:
+            text = text[m.end():]
+            break
+
+    # Cut the license footer at the earliest end marker
+    end_idx = len(text)
+    for marker in END_MARKERS:
+        m = marker.search(text)
+        if m:
+            end_idx = min(end_idx, m.start())
+    text = text[:end_idx]
+
+    # Drop the "Produced by ..." credits paragraph at the top
+    text = PRODUCED_BY.sub("", text.lstrip(), count=1)
     return text
 
 def normalize_linebreaks(text: str) -> str:
     # Normalize line endings to just '\n'
     text = text.replace('\r\n', '\n').replace('\r', '\n')
-    
+
     # Replace 2+ line breaks with a placeholder
-    text = re.sub(r'\n{2,}', '__PARA__', text)
+    text = re.sub(r'\n\s*\n+', '__PARA__', text)
     # Remove remaining single line breaks
     text = re.sub(r'\n', ' ', text)
+    # Collapse runs of spaces left by indentation
+    text = re.sub(r'[ \t]+', ' ', text)
     # Restore paragraph breaks
     text = text.replace('__PARA__', '\n')
-    
+    text = "\n".join(line.strip() for line in text.split('\n'))
+
     return text.strip()
 
 # Open the output file once
@@ -57,6 +80,8 @@ with open(output_file, "w", encoding="utf-8", newline="\n") as out_f:
         if len(cleaned) < 500:  # skip tiny/empty files
             print(f"⚠️ Skipping {filename}, too short.")
             continue
+        if "gutenberg" in cleaned.lower():
+            print(f"⚠️ {filename} still mentions Gutenberg after cleaning")
 
         # Add separator between books
         out_f.write(cleaned + "\n\n=== NEW BOOK ===\n\n")

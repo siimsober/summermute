@@ -22,11 +22,20 @@ Newest first. Record what changed, why, and what was learned.
 - Gutenberg: strip header/footer for both `THIS` and `THE PROJECT GUTENBERG EBOOK` marker variants
   (22 of 40 books were keeping the license boilerplate), drop the marker line itself, cut the
   license at the END marker.
-- Wikipedia: parse the XML properly and keep only article text (main namespace, no redirects)
-  instead of regex-stripping tags, which left page ids, timestamps, usernames and edit
-  summaries in the training text. Also remove `<ref>` content, nested templates, tables,
-  categories and wiki markup.
+  Old pre-2000s etexts use a "Small Print" header and "End of (Project Gutenberg's) Etext"
+  footer instead, so those are handled too. "Produced by ..." credits are dropped.
+- Wikipedia: stream the XML with `ElementTree.iterparse` and keep only article text
+  (main namespace, no redirects or disambiguation pages) instead of regex-stripping tags,
+  which left page ids, timestamps, usernames and edit summaries in the training text.
+  Also removes `<ref>` content, nested templates, tables, file/category/language links,
+  bold/italic quotes, list markers, and the tail sections (Viited, Välislingid, Kirjandus, ...).
+  Stops at 12 MB of clean text (`MAX_BYTES`), about 2,000 articles.
 - Why: the model was spending capacity memorizing metadata and boilerplate.
+- Results: eng 11.5 MB / 40 books (10084.txt was wrongly skipped before), no license text
+  left. est 12.0 MB, fewer than 50 of 103k lines with leftover markup.
+- Known leftovers: 1249.txt (Anthem) is a comparison edition that embeds a second Gutenberg
+  header in the body; a few transcriber notes mention Project Gutenberg.
+- Consequence: existing vocabs and models were built from the old data and should be rebuilt.
 
 ### 2026-11-07 — Assessment
 Priorities agreed, in order:
