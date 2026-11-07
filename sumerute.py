@@ -1,4 +1,4 @@
-# summermute.py
+# sumerute.py
 import sys
 import os
 import torch
@@ -76,20 +76,19 @@ while True:
     #else:
     #    context = context[-context_len:]  # truncate to last context_len tokens
     #print(context)
-    x = torch.tensor([context], dtype=torch.long)
+    context = torch.tensor([context], dtype=torch.long)  # initial input
     generated = []
 
     with torch.no_grad():
-        # First forward pass: process the whole input
-        logits = model(x)
-
-        # Start generation from the last token
-        next_token = x[0, -1].unsqueeze(0).unsqueeze(0)
-
-        for _ in range(max_gen):  # generate 200 new tokens
-            logits = model(next_token)               
+        for _ in range(max_gen):
+            # keep only the last max_len tokens
+            x_input = context[:, -model.max_len:]
+            logits = model(x_input)
             probs = F.softmax(logits[:, -1, :] / temperature, dim=-1)
-            next_token = torch.multinomial(probs, num_samples=1)  # shape [1, 1]
+            next_token = torch.multinomial(probs, num_samples=1)
+            
+            # append to context for next iteration
+            context = torch.cat([context, next_token], dim=1)
             generated.append(next_token.item())
             
     generated_bytes = tokenizer.decode(generated)
