@@ -18,6 +18,12 @@ A small language model built from scratch to learn how LMs work, trained on Engl
 
 Newest first. Record what changed, why, and what was learned.
 
+### 2026-11-08 — No more 1-head models
+- Decision: new models use 2+ heads and always have the attention output projection.
+  `s_train.py` defaults to 2 layers x 2 heads; `--no-proj` removed. `s_model.py` still builds
+  models without the projection, so old checkpoints (baselines, 1-head runs) keep loading.
+- Not measured, and now won't be: how much of the 2-head gain came from the projection itself.
+
 ### 2026-11-08 — Simple Estonian: aabits
 - No Simple Estonian Wikipedia exists, and no open children's-text corpus was found (ENC is mostly
   web text; the fiction corpus is adult). Source: a simplified first-reader PDF in `data/raw/`

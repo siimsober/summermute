@@ -13,7 +13,8 @@ from s_model import myNN
 from tokenizer import BPETokenizer, EOT_ID
 
 # ---------- Settings ----------
-MODEL_CONFIG = dict(embed_size=64, max_len=256, dropout=0.1, n_layers=2, n_heads=1, attn_proj=True)
+# The attention output projection is always on for new models (old checkpoints without it still load)
+MODEL_CONFIG = dict(embed_size=64, max_len=256, dropout=0.1, n_layers=2, n_heads=2, attn_proj=True)
 BATCH_SIZE = 128
 LR = 1e-3              # peak learning rate (--lr)
 WARMUP_STEPS = 200     # (--warmup)
@@ -140,7 +141,6 @@ parser.add_argument("--init", help="start from this checkpoint's weights, with a
 parser.add_argument("--out", default="models", help="folder for checkpoints and log (default: models)")
 parser.add_argument("--layers", type=int, help=f"override n_layers (default {MODEL_CONFIG['n_layers']})")
 parser.add_argument("--heads", type=int, help=f"override n_heads (default {MODEL_CONFIG['n_heads']})")
-parser.add_argument("--no-proj", action="store_true", help="no output projection after attention")
 parser.add_argument("--lr", type=float, default=LR, help=f"peak learning rate (default {LR})")
 parser.add_argument("--warmup", type=int, default=WARMUP_STEPS, help=f"warmup steps (default {WARMUP_STEPS})")
 parser.add_argument("--eval-every", type=int, default=EVAL_EVERY, help=f"steps between evals (default {EVAL_EVERY})")
@@ -171,8 +171,6 @@ if args.layers:
     model_config["n_layers"] = args.layers
 if args.heads:
     model_config["n_heads"] = args.heads
-if args.no_proj:
-    model_config["attn_proj"] = False
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
