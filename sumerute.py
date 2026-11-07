@@ -65,7 +65,7 @@ print(f"Loaded model state: {model_file}")
 
 temperature = args.temperature
 print(f"Running at temp {temperature}, top-k {args.top_k or 'off'}, top-p {args.top_p if args.top_p < 1 else 'off'}")
-max_gen = 200      # max generated tokens
+max_gen = 800      # max generated tokens
 
 
 def sample_next(logits):
