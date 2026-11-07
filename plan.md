@@ -38,9 +38,9 @@ Done when: the journal has baseline val loss / bits per byte for eng and est wit
 
 Cheap and makes testing models nicer.
 
-- [ ] **top-k / top-p sampling** alongside temperature.
-- [ ] **Stop options**: on EOT (done), or at the end of a paragraph (`\n`).
-- [ ] **Print the prompt with the output**, and how many tokens were generated and why it stopped.
+- [x] **top-k / top-p sampling** alongside temperature.
+- [x] ~~**Stop options**~~ (EOT only, paragraph stop not wanted): on EOT (done), or at the end of a paragraph (`\n`).
+- [x] **Print the prompt with the output**, and how many tokens were generated and why it stopped.
 
 ## 3. Scale the model
 

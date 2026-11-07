@@ -18,6 +18,14 @@ A small language model built from scratch to learn how LMs work, trained on Engl
 
 Newest first. Record what changed, why, and what was learned.
 
+### 2026-11-07 — Better generation (plan step 2)
+- `sumerute.py <lang> <temperature> [--top-k 40] [--top-p 0.95]`: top-k and top-p (nucleus)
+  filtering before sampling, on by default; `--top-k 0 --top-p 1` turns them off.
+- Output shows the prompt with its continuation, the token count and why it stopped
+  (EOT or the 200-token limit). Paragraph stop was left out on purpose.
+- Effect on the baseline: fewer junk tokens, but the model itself is the limit; word-level
+  quality needs plan step 3.
+
 ### 2026-11-07 — Measurable training + baselines (plan step 1)
 - `s_train.py <file> <steps> [--resume]`: random windows per step, AdamW (decay on weight matrices
   only, betas 0.9/0.95), 200-step warmup + cosine to 1e-4, grad clip 1.0, batch 128 x 256.
