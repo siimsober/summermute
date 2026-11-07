@@ -18,6 +18,13 @@ A small language model built from scratch to learn how LMs work, trained on Engl
 
 Newest first. Record what changed, why, and what was learned.
 
+### 2026-11-07 — Causal mask as a buffer (plan step 3b)
+- Each `Block` builds its `max_len x max_len` bool mask once (`register_buffer`, `persistent=False`)
+  and slices `[:T, :T]`, instead of building a float mask every forward pass.
+- Same outputs as 3a with the same weights (checked for T = 256, 17, 1); checkpoints unchanged,
+  since non-persistent buffers aren't saved.
+- Speed: training step 33.9 -> 31.9 ms (~6%, batch 128 x 256 on GTX 980); chat forward unchanged.
+
 ### 2026-11-07 — Block class (plan step 3a)
 - Attention + MLP moved into `Block` in `s_model.py`; `myNN` holds `blocks = ModuleList` of
   `n_layers` blocks (new config key, default 1). No change to the math.

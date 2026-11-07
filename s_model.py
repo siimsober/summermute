@@ -5,9 +5,14 @@ import torch.nn.functional as F
 
 class Block(nn.Module):
     """One transformer block: attention (tokens gather from earlier tokens), then MLP (per token)."""
-    def __init__(self, embed_size, dropout):
+    def __init__(self, embed_size, max_len, dropout):
         super().__init__()
         self.embed_size = embed_size
+
+        # causal mask: position i may only look at positions <= i. Built once, moves with .to(device),
+        # not saved in checkpoints (persistent=False)
+        self.register_buffer("mask", torch.tril(torch.ones(max_len, max_len, dtype=torch.bool)),
+                             persistent=False)
 
         # attention pre-norm
         self.ln1 = nn.LayerNorm(embed_size)
@@ -36,8 +41,7 @@ class Block(nn.Module):
         V = self.value(x_norm)
 
         att = (Q @ K.transpose(-2, -1)) / (self.embed_size ** 0.5)
-        mask = torch.tril(torch.ones(T, T, device=x.device))
-        att = att.masked_fill(mask == 0, float('-inf'))
+        att = att.masked_fill(~self.mask[:T, :T], float('-inf'))
         att = F.softmax(att, dim=-1)
 
         context = self.attn_dropout(att @ V)
@@ -61,7 +65,7 @@ class myNN(nn.Module):
         self.pos_embed = nn.Embedding(max_len, embed_size)
 
         # stack of transformer blocks
-        self.blocks = nn.ModuleList([Block(embed_size, dropout) for _ in range(n_layers)])
+        self.blocks = nn.ModuleList([Block(embed_size, max_len, dropout) for _ in range(n_layers)])
 
         # final LayerNorm before output
         self.lnf = nn.LayerNorm(embed_size)

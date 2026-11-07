@@ -49,7 +49,7 @@ Goal: lower val loss. Change one thing at a time and record each result.
 - [x] **`Block` class** (attention + MLP), stack `n_layers` of them. (3a)
 - [ ] **Multi-head attention** with an output projection after the heads.
 - [ ] **Weight tying**: output layer shares weights with the token embedding.
-- [ ] **Mask as `register_buffer`** instead of rebuilding it every forward pass.
+- [x] **Mask as `register_buffer`** instead of rebuilding it every forward pass. (3b)
 - [ ] **Mixed precision** on GPU (`torch.autocast`) for speed.
 - [ ] **Sizes to try** (params roughly, with a 512 vocab):
 
