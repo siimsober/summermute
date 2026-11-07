@@ -54,7 +54,8 @@ else:
     vocab_path = f"data/vocab/vocab-{lang}-{find_latest_vocab_number('data/vocab', lang)}.tsv"
 
 tokenizer = BPETokenizer(vocab_path)
-model = myNN(tokenizer.get_vocab_size(), config["embed_size"], config["max_len"], config["dropout"])
+model = myNN(tokenizer.get_vocab_size(), config["embed_size"], config["max_len"], config["dropout"],
+             config.get("n_layers", 1))
 total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
 print(f"Total trainable parameters: {total_params}, vocab {vocab_path}")
 

@@ -3,16 +3,11 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-class myNN(nn.Module):
-    def __init__(self, vocab_size, embed_size=64, max_len=256, dropout=0.1):
+class Block(nn.Module):
+    """One transformer block: attention (tokens gather from earlier tokens), then MLP (per token)."""
+    def __init__(self, embed_size, dropout):
         super().__init__()
-        self.vocab_size = vocab_size
         self.embed_size = embed_size
-        self.max_len = max_len
-
-        # token + positional embeddings
-        self.embed = nn.Embedding(vocab_size, embed_size)
-        self.pos_embed = nn.Embedding(max_len, embed_size)
 
         # attention pre-norm
         self.ln1 = nn.LayerNorm(embed_size)
@@ -31,6 +26,43 @@ class myNN(nn.Module):
             nn.Dropout(dropout),
         )
 
+    def forward(self, x):
+        B, T, E = x.shape
+
+        # --- Attention ---
+        x_norm = self.ln1(x)
+        Q = self.query(x_norm)
+        K = self.key(x_norm)
+        V = self.value(x_norm)
+
+        att = (Q @ K.transpose(-2, -1)) / (self.embed_size ** 0.5)
+        mask = torch.tril(torch.ones(T, T, device=x.device))
+        att = att.masked_fill(mask == 0, float('-inf'))
+        att = F.softmax(att, dim=-1)
+
+        context = self.attn_dropout(att @ V)
+        x = x + context  # residual
+
+        # --- MLP ---
+        x_norm2 = self.ln2(x)
+        x = x + self.mlp(x_norm2)  # residual
+        return x
+
+
+class myNN(nn.Module):
+    def __init__(self, vocab_size, embed_size=64, max_len=256, dropout=0.1, n_layers=1):
+        super().__init__()
+        self.vocab_size = vocab_size
+        self.embed_size = embed_size
+        self.max_len = max_len
+
+        # token + positional embeddings
+        self.embed = nn.Embedding(vocab_size, embed_size)
+        self.pos_embed = nn.Embedding(max_len, embed_size)
+
+        # stack of transformer blocks
+        self.blocks = nn.ModuleList([Block(embed_size, dropout) for _ in range(n_layers)])
+
         # final LayerNorm before output
         self.lnf = nn.LayerNorm(embed_size)
         # output projection
@@ -45,23 +77,8 @@ class myNN(nn.Module):
         pos_emb = self.pos_embed(pos)[None, :, :]    # [1, T, E]
         x = tok_emb + pos_emb                        # [B, T, E]
 
-        # --- Attention block ---
-        x_norm = self.ln1(x)
-        Q = self.query(x_norm)
-        K = self.key(x_norm)
-        V = self.value(x_norm)
-
-        att = (Q @ K.transpose(-2, -1)) / (self.embed_size ** 0.5)
-        mask = torch.tril(torch.ones(T, T, device=x.device))
-        att = att.masked_fill(mask == 0, float('-inf'))
-        att = F.softmax(att, dim=-1)
-
-        context = self.attn_dropout(att @ V)
-        x = x + context  # residual
-
-        # --- MLP block ---
-        x_norm2 = self.ln2(x)
-        x = x + self.mlp(x_norm2)  # residual
+        for block in self.blocks:
+            x = block(x)                             # [B, T, E]
 
         # --- final normalization and output ---
         x = self.lnf(x)

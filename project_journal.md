@@ -18,6 +18,16 @@ A small language model built from scratch to learn how LMs work, trained on Engl
 
 Newest first. Record what changed, why, and what was learned.
 
+### 2026-11-07 — Block class (plan step 3a)
+- Attention + MLP moved into `Block` in `s_model.py`; `myNN` holds `blocks = ModuleList` of
+  `n_layers` blocks (new config key, default 1). No change to the math.
+- Verified: same 128,192 params, and the old model and the new one with the same weights give
+  identical outputs (max difference 0.0). 2 layers would be 173,824 params.
+- Weight names changed (`key.weight` -> `blocks.0.key.weight`), so the baseline checkpoints were
+  converted in place instead of retrained; originals in `models/pre-3a/`. Resume from a converted
+  checkpoint continues at the baseline val loss.
+- Step 3 is done in small steps, one change at a time, each compared against the baselines.
+
 ### 2026-11-07 — Better generation (plan step 2)
 - `sumerute.py <lang> <temperature> [--top-k 40] [--top-p 0.95]`: top-k and top-p (nucleus)
   filtering before sampling, on by default; `--top-k 0 --top-p 1` turns them off.

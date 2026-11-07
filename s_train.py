@@ -12,7 +12,7 @@ from s_model import myNN
 from tokenizer import BPETokenizer
 
 # ---------- Settings ----------
-MODEL_CONFIG = dict(embed_size=64, max_len=256, dropout=0.1)
+MODEL_CONFIG = dict(embed_size=64, max_len=256, dropout=0.1, n_layers=1)
 BATCH_SIZE = 128
 LR = 1e-3              # peak learning rate
 MIN_LR = 1e-4          # learning rate at the end of the cosine decay
@@ -140,7 +140,8 @@ vocab_size = tokenizer.get_vocab_size()
 print(f"Tokenizer initialized from {vocab_path} with {vocab_size} token vocabulary.")
 
 config = checkpoint["config"] if checkpoint else dict(MODEL_CONFIG, vocab_path=vocab_path, vocab_size=vocab_size)
-model = myNN(vocab_size, config["embed_size"], config["max_len"], config["dropout"]).to(device)
+model = myNN(vocab_size, config["embed_size"], config["max_len"], config["dropout"],
+             config.get("n_layers", 1)).to(device)
 total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
 print(f"Total trainable parameters: {total_params}")
 

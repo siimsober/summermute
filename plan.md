@@ -46,7 +46,7 @@ Cheap and makes testing models nicer.
 
 Goal: lower val loss. Change one thing at a time and record each result.
 
-- [ ] **`Block` class** (attention + MLP), stack `n_layers` of them.
+- [x] **`Block` class** (attention + MLP), stack `n_layers` of them. (3a)
 - [ ] **Multi-head attention** with an output projection after the heads.
 - [ ] **Weight tying**: output layer shares weights with the token embedding.
 - [ ] **Mask as `register_buffer`** instead of rebuilding it every forward pass.
