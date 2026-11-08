@@ -18,6 +18,32 @@ A small language model built from scratch to learn how LMs work, trained on Engl
 
 Newest first. Record what changed, why, and what was learned.
 
+### 2026-11-08 — Experiment: where to put the aabits (curriculum vs mixing vs fine-tuning)
+- All est, 2 layers x 2 heads, vocab 512. Scored on Wikipedia val and on 5 held-out aabits
+  stories (every 10th, never trained on). Bits per byte, lower is better.
+
+| run | what | wiki | aabits held-out |
+|---|---|---|---|
+| A | Wikipedia only (earlier run) | **2.505** | 3.190 |
+| A2 | Wikipedia only, other seed | 2.516 | 3.192 |
+| B | aabits only 280 steps (best held-out), then Wikipedia 10k | 2.517 | 3.191 |
+| C1 | Wikipedia + aabits x1 (0.3%) | 2.543 | 3.125 |
+| C10 | Wikipedia + aabits x10 (3%) | 2.538 | 2.822 |
+| D | A, then 1k steps Wikipedia + aabits x100 (23%), lr 3e-4 | 2.540 | **2.627** |
+
+- **Run-to-run noise** (A vs A2): ~0.01 bits/byte. Differences below ~0.02 mean nothing.
+- **Curriculum (B)**: a head start on Wikipedia that fades — wiki val loss after 250 steps
+  4.76 vs 5.21 (A2), 1000: 4.21 vs 4.25, 2000: 4.07 vs 4.08, end: same. What it learned on
+  aabits was fully forgotten (held-out 3.105 after the aabits phase -> 3.191 after Wikipedia,
+  same as never seeing it). No lasting effect on either score.
+- **Mixing (C)**: costs ~0.03 on Wikipedia, gains on simple text with the repeat factor.
+- **Fine-tuning at the end (D)**: by far the best on simple text (−0.56), same small Wikipedia
+  cost as mixing, and only 1k extra steps. Its samples pick up the book's style: quotes,
+  characters (Teele, isa), sünnipäev.
+- B's aabits phase did not reach memorization: the 215k-param model was at train loss 3.16
+  after 600 steps (held-out best at step 280). A "train until memorized" run needs far more steps.
+- Conclusion: simple text belongs at the end (or mixed in), not at the start.
+
 ### 2026-11-08 — No more 1-head models
 - Decision: new models use 2+ heads and always have the attention output projection.
   `s_train.py` defaults to 2 layers x 2 heads; `--no-proj` removed. `s_model.py` still builds
