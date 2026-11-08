@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>B-mem Controls</title>
+<style>
+  .viz-root {
+    color-scheme: light;
+    --surface-1: #fcfcfb;
+    --page: #f9f9f7;
+    --text-primary: #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted: #898781;
+    --grid: #e1e0d9;
+    --axis: #c3c2b7;
+    --border: rgba(11,11,11,0.10);
+    --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) .viz-root {
+      color-scheme: dark;
+      --surface-1: #1a1a19; --page: #0d0d0d;
+      --text-primary: #f0efec; --text-secondary: #c3c2b7; --text-muted: #898781;
+      --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10);
+      --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181;
+    }
+  }
+  :root[data-theme="dark"] .viz-root {
+    color-scheme: dark;
+    --surface-1: #1a1a19; --page: #0d0d0d;
+    --text-primary: #f0efec; --text-secondary: #c3c2b7; --text-muted: #898781;
+    --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10);
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181;
+  }
+  html, body { margin: 0; }
+  body { background: var(--page); }
+  .viz-root {
+    background: var(--page); color: var(--text-primary); min-height: 100vh;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    padding: 24px 16px 40px; box-sizing: border-box;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; }
+  h1 { font-size: 20px; font-weight: 600; margin: 0 0 6px; }
+  .lede { color: var(--text-secondary); font-size: 14px; line-height: 1.5; margin: 0 0 20px; }
+  .card {
+    background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px 16px 8px; margin-bottom: 20px; position: relative;
+  }
+  .card h2 { font-size: 15px; font-weight: 600; margin: 0 0 4px; }
+  .card p { color: var(--text-secondary); font-size: 13px; line-height: 1.45; margin: 0 0 8px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; color: var(--text-secondary);
+            margin: 4px 0 4px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend i { width: 14px; height: 2px; border-radius: 1px; display: inline-block; }
+  .legend i.dash { background: none !important; border-top: 2px dashed var(--text-muted); height: 0; }
+  svg { width: 100%; height: auto; display: block; overflow: visible; }
+  svg text { font-family: inherit; }
+  .tick { fill: var(--text-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+  .axis-title { fill: var(--text-muted); font-size: 11px; }
+  .direct { font-size: 12px; fill: var(--text-secondary); }
+  .tip {
+    position: absolute; pointer-events: none; background: var(--surface-1); color: var(--text-primary);
+    border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 12px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.12); white-space: nowrap; display: none; z-index: 2;
+  }
+  .tip b { font-weight: 600; }
+  .tip .row { display: flex; align-items: center; gap: 6px; margin-top: 3px;
+              font-variant-numeric: tabular-nums; color: var(--text-secondary); }
+  .tip .row i { width: 10px; height: 2px; display: inline-block; border-radius: 1px; }
+  .tip .row .v { margin-left: auto; padding-left: 12px; color: var(--text-primary); }
+  .findings { font-size: 14px; line-height: 1.55; color: var(--text-secondary); }
+  .findings b { color: var(--text-primary); font-weight: 600; }
+  details { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
+  summary { cursor: pointer; color: var(--text-primary); padding: 6px 0; }
+  table { border-collapse: collapse; width: 100%; margin: 8px 0; font-variant-numeric: tabular-nums; }
+  th, td { text-align: right; padding: 4px 8px; border-bottom: 1px solid var(--grid); }
+  th:first-child, td:first-child { text-align: left; }
+  th { color: var(--text-primary); font-weight: 600; }
+  .scroll { overflow-x: auto; }
+</style>
+</head>
+<body>
+<div class="viz-root">
+<div class="wrap">
+  <h1>Memorize first, then Wikipedia: head start or just more training?</h1>
+  <p class="lede">Estonian, 2 layers × 2 heads, 768-token vocab, 215k parameters. Wikipedia validation loss (lower is better).
+    Run-to-run noise is about ±0.015 in loss.</p>
+
+  <div class="card" id="gapCard">
+    <h2>1. Was there a head start? Gap to A2 at the same Wikipedia step</h2>
+    <p>All runs here use the same 10k-step Wikipedia schedule and differ only in their starting weights.
+      Below zero = ahead of A2 (no warm-up).</p>
+    <div class="legend" id="gapLegend"></div>
+    <svg id="gapChart" viewBox="0 0 820 300" role="img" aria-label="Validation loss gap to A2 by Wikipedia step"></svg>
+    <div class="tip" id="gapTip"></div>
+  </div>
+
+  <div class="card" id="fairCard">
+    <h2>2. Fair comparison: validation loss by total training steps</h2>
+    <p>Wikipedia phases placed after their warm-up (5k aabits or 5k Wikipedia-slice steps; B after 280).
+      Warm-up phases aren't drawn: their Wikipedia loss is 5.7–17, off this scale. Early points above 4.4 are cut off.</p>
+    <div class="legend" id="fairLegend"></div>
+    <svg id="fairChart" viewBox="0 0 820 320" role="img" aria-label="Validation loss by total training steps"></svg>
+    <div class="tip" id="fairTip"></div>
+  </div>
+
+  <div class="card findings" id="findings"></div>
+
+  <details>
+    <summary>Data table</summary>
+    <div class="scroll"><table id="table"></table></div>
+  </details>
+</div>
+</div>
+<script>
+const DATA = /*DATA*/null;
+const SEED2_FINAL = /*SEED2*/null;
+const ORDER = ["A2", "B", "Bmem", "Wikimem", "Ctrl15k"];   // fixed color order: slot 1..5
+const color = k => `var(--s${ORDER.indexOf(k) + 1})`;
+const NS = "http://www.w3.org/2000/svg";
+const el = (tag, attrs = {}, parent) => {
+  const e = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  if (parent) parent.appendChild(e);
+  return e;
+};
+const valAt = (key, step) => { const p = DATA[key].points.find(p => p[0] === step); return p ? p[1] : null; };
+
+function legend(id, keys, extra) {
+  const box = document.getElementById(id);
+  keys.forEach(k => { box.insertAdjacentHTML("beforeend",
+    `<span><i style="background:${color(k)}"></i>${DATA[k].label}</span>`); });
+  if (extra) box.insertAdjacentHTML("beforeend", extra);
+}
+
+// Generic line chart: series = [{key, pts:[[x,y]...]}], with crosshair + tooltip
+function lineChart({svgId, tipId, cardId, series, xMax, yMin, yMax, yTicks, xTitle, yTitle, yFmt, zeroLine, directLabels}) {
+  const svg = document.getElementById(svgId), tip = document.getElementById(tipId), card = document.getElementById(cardId);
+  const [W, H] = svg.getAttribute("viewBox").split(" ").slice(2).map(Number);
+  const m = {l: 66, r: directLabels ? 90 : 16, t: 10, b: 40};
+  const iw = W - m.l - m.r, ih = H - m.t - m.b;
+  const X = x => m.l + x / xMax * iw;
+  const Y = y => m.t + (yMax - y) / (yMax - yMin) * ih;
+  const clipId = svgId + "Clip";
+  el("rect", {x: m.l, y: m.t, width: iw, height: ih}, el("clipPath", {id: clipId}, el("defs", {}, svg)));
+
+  yTicks.forEach(v => {
+    el("line", {x1: m.l, x2: m.l + iw, y1: Y(v), y2: Y(v), stroke: "var(--grid)", "stroke-width": 1}, svg);
+    el("text", {x: m.l - 8, y: Y(v) + 4, "text-anchor": "end", class: "tick"}, svg).textContent = yFmt(v);
+  });
+  for (let x = 0; x <= xMax; x += 2500) {
+    el("text", {x: X(x), y: m.t + ih + 18, "text-anchor": "middle", class: "tick"}, svg).textContent =
+      x === 0 ? "0" : (x / 1000) + "k";
+  }
+  el("line", {x1: m.l, x2: m.l + iw, y1: m.t + ih, y2: m.t + ih, stroke: "var(--axis)", "stroke-width": 1}, svg);
+  el("text", {x: m.l + iw / 2, y: H - 4, "text-anchor": "middle", class: "axis-title"}, svg).textContent = xTitle;
+  el("text", {x: 12, y: m.t + ih / 2, transform: `rotate(-90 12 ${m.t + ih / 2})`, "text-anchor": "middle",
+              class: "axis-title"}, svg).textContent = yTitle;
+
+  if (zeroLine) {
+    el("line", {x1: m.l, x2: m.l + iw, y1: Y(0), y2: Y(0), stroke: "var(--text-muted)", "stroke-width": 1.5,
+                "stroke-dasharray": "5 4"}, svg);
+  }
+  const g = el("g", {"clip-path": `url(#${clipId})`}, svg);
+  series.forEach(s => {
+    el("path", {d: s.pts.map((p, i) => (i ? "L" : "M") + X(p[0]).toFixed(1) + " " + Y(p[1]).toFixed(1)).join(""),
+                fill: "none", stroke: color(s.key), "stroke-width": 2, "stroke-linejoin": "round",
+                "stroke-linecap": "round"}, g);
+  });
+  if (directLabels) {
+    // labels at line ends, nudged apart so they never overlap
+    const ends = series.map(s => ({text: DATA[s.key].short, y: Y(s.pts[s.pts.length - 1][1])}));
+    if (zeroLine) ends.push({text: zeroLine, y: Y(0)});
+    ends.sort((a, b) => a.y - b.y);
+    for (let i = 1; i < ends.length; i++) if (ends[i].y - ends[i - 1].y < 15) ends[i].y = ends[i - 1].y + 15;
+    ends.forEach(({text, y}) => {
+      el("text", {x: m.l + iw + 8, y: y + 4, class: "direct"}, svg).textContent = text;
+    });
+  }
+
+  // hover layer
+  const xs = [...new Set(series.flatMap(s => s.pts.map(p => p[0])))].sort((a, b) => a - b);
+  const cross = el("line", {y1: m.t, y2: m.t + ih, stroke: "var(--axis)", "stroke-width": 1, visibility: "hidden"}, svg);
+  const dots = series.map(s => el("circle", {r: 4.5, fill: color(s.key), stroke: "var(--surface-1)", "stroke-width": 2,
+                                             visibility: "hidden"}, svg));
+  const hit = el("rect", {x: m.l, y: m.t, width: iw, height: ih, fill: "transparent"}, svg);
+  const hide = () => { tip.style.display = "none"; cross.setAttribute("visibility", "hidden");
+                       dots.forEach(d => d.setAttribute("visibility", "hidden")); };
+  hit.addEventListener("pointermove", ev => {
+    const r = svg.getBoundingClientRect(), sx = (ev.clientX - r.left) / r.width * W;
+    const xv = (sx - m.l) / iw * xMax;
+    const x = xs.reduce((a, b) => Math.abs(b - xv) < Math.abs(a - xv) ? b : a);
+    cross.setAttribute("x1", X(x)); cross.setAttribute("x2", X(x)); cross.setAttribute("visibility", "visible");
+    const rows = [];
+    series.forEach((s, i) => {
+      const p = s.pts.find(p => p[0] === x);
+      if (p && p[1] >= yMin && p[1] <= yMax) {
+        dots[i].setAttribute("cx", X(x)); dots[i].setAttribute("cy", Y(p[1])); dots[i].setAttribute("visibility", "visible");
+      } else dots[i].setAttribute("visibility", "hidden");
+      if (p) rows.push({k: s.key, v: p[1], note: s.note ? s.note(x) : ""});
+    });
+    rows.sort((a, b) => a.v - b.v);
+    tip.innerHTML = `<b>${xTitle.split(" (")[0]} ${x.toLocaleString("en")}</b>` + rows.map(r =>
+      `<div class="row"><i style="background:${color(r.k)}"></i>${DATA[r.k].label}${r.note}<span class="v">${yFmt(r.v)}</span></div>`).join("");
+    tip.style.display = "block";
+    const cr = card.getBoundingClientRect(), px = ev.clientX - cr.left, py = ev.clientY - cr.top;
+    const tw = tip.offsetWidth;
+    tip.style.left = (px + 16 + tw > cr.width ? px - tw - 16 : px + 16) + "px";
+    tip.style.top = Math.max(8, py - 40) + "px";
+  });
+  hit.addEventListener("pointerleave", hide);
+}
+
+// ---- Panel 1: gap to A2 at the same Wikipedia step ----
+const gapKeys = ["B", "Bmem", "Wikimem"];
+const gapSeries = gapKeys.map(k => ({key: k, pts: DATA[k].points
+  .filter(p => p[0] <= 10000 && valAt("A2", p[0]) !== null).map(p => [p[0], +(p[1] - valAt("A2", p[0])).toFixed(4)])}));
+const gMin = Math.min(...gapSeries.flatMap(s => s.pts.map(p => p[1])));
+const gapLo = Math.floor(gMin * 10) / 10;
+legend("gapLegend", gapKeys, `<span><i class="dash"></i>A2 (zero line)</span>`);
+lineChart({svgId: "gapChart", tipId: "gapTip", cardId: "gapCard", series: gapSeries, xMax: 10000,
+  yMin: gapLo, yMax: 0.1, yTicks: Array.from({length: Math.round((0.1 - gapLo) / 0.1) + 1}, (_, i) => +(gapLo + i * 0.1).toFixed(1)),
+  xTitle: "Wikipedia step", yTitle: "val loss minus A2", yFmt: v => (v > 0 ? "+" : "") + v.toFixed(v === 0 ? 1 : 2),
+  zeroLine: "A2", directLabels: true});
+
+// ---- Panel 2: by total steps ----
+const fairSeries = ORDER.map(k => ({key: k, pts: DATA[k].points.map(p => [p[0] + DATA[k].offset, p[1]])}));
+legend("fairLegend", ORDER);
+lineChart({svgId: "fairChart", tipId: "fairTip", cardId: "fairCard", series: fairSeries, xMax: 15000,
+  yMin: 3.4, yMax: 4.4, yTicks: [3.4, 3.6, 3.8, 4.0, 4.2, 4.4],
+  xTitle: "Total training step (warm-up + Wikipedia)", yTitle: "Wikipedia val loss", yFmt: v => v.toFixed(3),
+  directLabels: false});
+
+// ---- Findings and table ----
+const last = k => DATA[k].points[DATA[k].points.length - 1][1];
+const gap = (k, s) => { const a = valAt("A2", s), b = valAt(k, s); return (b - a); };
+const f = v => (v > 0 ? "+" : "−") + Math.abs(v).toFixed(2);
+document.getElementById("findings").innerHTML = `
+  <b>Head start: yes, but it isn't one that fades.</b> Every warm-up helps right away (B ${f(gap("B", 250))},
+  B-mem ${f(gap("Bmem", 250))} at step 250). B's short warm-up is gone by step 2,000 (${f(gap("B", 2000))}).
+  The memorized warm-ups pull further ahead until about step 2,000–3,000 (B-mem ${f(gap("Bmem", 2500))})
+  and keep most of it to the end (${f(gap("Bmem", 10000))}).<br><br>
+  <b>But per step, Wikipedia is worth more.</b> With the same 15k total steps, plain Wikipedia ends lowest
+  (${last("Ctrl15k").toFixed(3)}), then the memorized Wikipedia slice (${last("Wikimem").toFixed(3)}), then B-mem
+  (${last("Bmem").toFixed(3)}; seed 2: ${(+SEED2_FINAL).toFixed(3)}). The 5k aabits steps did real work, but less than 5k Wikipedia steps.`;
+
+const steps = [250, 1000, 2000, 5000, 10000];
+let t = `<tr><th>Run</th><th>Warm-up</th>${steps.map(s => `<th>gap @${s / 1000 >= 1 ? s / 1000 + "k" : s}</th>`).join("")}<th>final val</th></tr>`;
+ORDER.forEach(k => {
+  const d = DATA[k];
+  t += `<tr><td>${d.label}</td><td>${d.offset ? d.offset.toLocaleString("en") + " steps" : "–"}</td>` +
+    steps.map(s => `<td>${k === "A2" ? "0" : (valAt(k, s) !== null ? f(gap(k, s)) : "–")}</td>`).join("") +
+    `<td>${last(k).toFixed(4)}</td></tr>`;
+});
+document.getElementById("table").innerHTML = t +
+  `<tr><td colspan="${steps.length + 3}">Gap = val loss minus A2 at the same Wikipedia step. Ctrl-15k's gaps also include its slower learning-rate decay.</td></tr>`;
+</script>
+</body>
+</html>
