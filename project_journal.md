@@ -18,6 +18,29 @@ A small language model built from scratch to learn how LMs work, trained on Engl
 
 Newest first. Record what changed, why, and what was learned.
 
+### 2026-11-08 — Controls for B-mem: it's mostly extra training, not the aabits
+- Same setup (est, 2x2, vocab 512), aabits held-out scored in every run. Bits per byte:
+
+| run | steps | wiki | aabits held-out |
+|---|---|---|---|
+| A2 | 10k Wikipedia | 2.516 | 3.192 |
+| B-mem | 5k aabits (memorized) + 10k Wikipedia | 2.425 | 3.066 |
+| B-mem seed 2 | same, other seed | 2.423 | 3.069 |
+| Ctrl-wikimem | 5k memorized Wikipedia slice (same size as aabits) + 10k Wikipedia | 2.404 | 3.120 |
+| Ctrl-15k | 15k Wikipedia | **2.387** | 3.145 |
+
+- B-mem reproduces (seed 2: 2.423), so it wasn't luck.
+- But memorizing an equally small *Wikipedia* slice helps more, and spending all 15k steps on
+  Wikipedia helps most. The B-mem gain is mostly "more optimizer steps", not simple text first.
+  Any small memorized text is a useful warm-up compared with no warm-up; real data is better.
+- aabits first leaves a small edge on simple text (3.07 vs 3.15); fine-tuning at the end (D, 2.63)
+  is far better for that.
+- Big side finding: **the models are undertrained and the LR schedule matters.** At step 10k,
+  Ctrl-15k (lr still 3.3e-4) was at 3.497 val loss vs A2 3.624 (lr already decayed to 1e-4).
+  10k-step runs anneal too early; longer runs at high LR keep improving.
+- Corrected conclusion: curriculum with aabits doesn't beat the same steps on Wikipedia.
+  Next: 20k-step runs for both languages.
+
 ### 2026-11-08 — B-mem: memorize aabits first, then Wikipedia (surprise)
 - Phase 1: aabits only, 5000 steps (train loss 4.5 -> 0.36; held-out stories 3.11 -> 7.04 bits/byte,
   i.e. memorized, not generalized). Phase 2: the last (memorized) weights, then 10k Wikipedia
