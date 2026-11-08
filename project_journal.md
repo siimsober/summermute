@@ -18,9 +18,21 @@ A small language model built from scratch to learn how LMs work, trained on Engl
 
 Newest first. Record what changed, why, and what was learned.
 
+**Naming convention (from 2026-11-08):** vocab sizes are total tokens, as is standard
+(256 byte tokens + merges). `vocab-est-768.tsv` = 768 tokens = 512 merges. Earlier entries were
+converted; model folder names like `v512-...` keep the old merge-count names.
+
+### 2026-11-08 — Vocab files renamed to token counts; vocab 1256
+- Renamed `vocab-*-0/256/512` -> `-256/512/768`, token caches too, and the vocab path inside all
+  66 checkpoints (each verified: embedding rows = vocab size). `build_vocab.py` already named
+  output as base + added, so it now counts tokens. New `s_train.py --vocab N` (tokens, default
+  the largest) and `--embed N`.
+- `vocab-{eng,est}-1256.tsv`: 488 more merges (1000 in total). eng 2.58 bytes/token (768: 2.28),
+  est 2.39 (768: 2.10). Longest tokens: ` politician`, ` President`, ` Nõukogude`, ` kirjanik`.
+
 ### 2026-11-08 — Final 20k-step models (`models/final-20k/`)
 - Recipe from all experiments so far: plain Wikipedia training, 2 layers x 2 heads, embed 64,
-  vocab 512 merges (768 tokens), 215k params, 20k steps, seed 1. ~26 min each on the GTX 980.
+  vocab 768 tokens (512 merges), 215k params, 20k steps, seed 1. ~26 min each on the GTX 980.
 
 | lang | val loss | bits/byte | vs 10k run (v512-2x64-2h) | train loss |
 |---|---|---|---|---|
@@ -38,7 +50,7 @@ Newest first. Record what changed, why, and what was learned.
   for simple Estonian.
 
 ### 2026-11-08 — Controls for B-mem: it's mostly extra training, not the aabits
-- Same setup (est, 2x2, vocab 512), aabits held-out scored in every run. Bits per byte:
+- Same setup (est, 2x2, vocab 768), aabits held-out scored in every run. Bits per byte:
 
 | run | steps | wiki | aabits held-out |
 |---|---|---|---|
@@ -83,7 +95,7 @@ Newest first. Record what changed, why, and what was learned.
   before believing it.
 
 ### 2026-11-08 — Experiment: where to put the aabits (curriculum vs mixing vs fine-tuning)
-- All est, 2 layers x 2 heads, vocab 512. Scored on Wikipedia val and on 5 held-out aabits
+- All est, 2 layers x 2 heads, vocab 768. Scored on Wikipedia val and on 5 held-out aabits
   stories (every 10th, never trained on). Bits per byte, lower is better.
 
 | run | what | wiki | aabits held-out |
@@ -129,13 +141,13 @@ Newest first. Record what changed, why, and what was learned.
 - `FIXES` in `clean_aabits.py` for typos in both PDFs: klegutama -> kelgutama, j aksa -> jaksa,
   soovides t aru -> soovidest aru, mixed dashes. Spaced hyphens become en dashes.
 
-### 2026-11-08 — Vocab 512 merges (768 tokens)
-- `vocab-{eng,est}-512.tsv`: 256 more merges on top of 256. eng 2.28 bytes/token (was 1.99),
+### 2026-11-08 — Vocab 768 tokens (512 merges)
+- `vocab-{eng,est}-768.tsv` (named `-512` until the rename): 256 more merges on top of 256. eng 2.28 bytes/token (was 1.99),
   est 2.10 (was 1.85). A 256-token window now covers ~14% more text.
 - Same 4 shapes as before, 10k steps; 1-head runs without projection, 2-head runs with it.
-  Folders `models/v512-<layers>x64-<heads>h/`. Comparison in bits per byte:
+  Folders `models/v512-<layers>x64-<heads>h/` (folder names use the old merge count). Comparison in bits per byte:
 
-| lang | layers x heads | bpb vocab 256 | bpb vocab 512 | change | params (512) |
+| lang | layers x heads | bpb vocab 512 | bpb vocab 768 | change | params (768) |
 |---|---|---|---|---|---|
 | est | 1 x 1 | 2.757 | 2.643 | −0.114 | 161k |
 | est | 1 x 2 | 2.716 | 2.614 | −0.102 | 165k |
@@ -148,7 +160,7 @@ Newest first. Record what changed, why, and what was learned.
 
 - The bigger vocab helps every shape, by 0.05–0.14 bits/byte, for only ~5% more time per run.
   The extra 33k params are all in the embedding and output layers.
-- With vocab 512, 2 heads help English a little (2.209 -> 2.196) and Estonian much less than
+- With vocab 768, 2 heads help English a little (2.209 -> 2.196) and Estonian much less than
   before (2.520 -> 2.505). Differences this small still need the run-to-run noise measured.
 - Still no overfitting (train ≈ val).
 
@@ -247,12 +259,12 @@ Newest first. Record what changed, why, and what was learned.
 - Fix, like GPT-2/GPT-4: `PRETOKENIZE` in `tokenizer.py` splits text into chunks (word with
   leading space, numbers of max 3 digits, punctuation, whitespace, contractions like `'s`, EOT alone)
   and merges never cross a chunk boundary, in both `build_vocab.py` and `encode()`.
-- Result for eng 256: 1.99 bytes/token (2.01 before), first merges ` t`, ` a`, `he`, `in`, ` the`;
+- Result for the eng 512-token vocab (256 merges): 1.99 bytes/token (2.01 before), first merges ` t`, ` a`, `he`, `in`, ` the`;
   longest tokens ` American`, ` their`, ` which`. ". This is" -> `.` ` this`-style tokens.
-- Old cross-word vocab kept as `vocab-eng-256-crossword.tsv` for comparison (not picked up by
+- Old cross-word vocab kept as `vocab-eng-512-crossword.tsv` for comparison (not picked up by
   the scripts). Vocabs built before this change encode worse now, since their cross-word merges
   no longer apply: rebuild them (est too).
-- est 256 rebuilt from `vocab-est-0`: 1.85 bytes/token, 19 s. `ä` and `õ` became whole-character
+- est 512-token vocab rebuilt from the 256-token byte base: 1.85 bytes/token, 19 s. `ä` and `õ` became whole-character
   tokens within the first 10 merges; longest tokens ` aastal`, ` maakond`, ` mille`.
   Old est vocabs (1, 3, 128) moved to `data/vocab/old/`.
 
@@ -264,7 +276,7 @@ Newest first. Record what changed, why, and what was learned.
 - `build_vocab.py` counts pairs once, then each merge only updates the counts next to the merged
   positions (numpy, `merge_pair` in `tokenizer.py`). Checked against a full recount for 300 merges.
 - Speed: 256 merges on 23.5 MB eng took 27 s (old version: ~45 s per merge, ~3 h).
-- `vocab-eng-256.tsv`: 512 tokens, 2.01 bytes/token. Larger vocabs (2k+) are now practical.
+- `vocab-eng-512.tsv` (then named `-256`): 512 tokens, 2.01 bytes/token. Larger vocabs (2k+) are now practical.
 
 ### 2026-11-07 — English = Simple Wikipedia + Gutenberg
 - `data/training-eng.txt` is now Simple Wikipedia (12 MB) followed by Gutenberg (11.5 MB),

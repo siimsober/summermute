@@ -7,7 +7,7 @@ from tokenizer import BPETokenizer, EOT_ID, merge_pair
 
 def find_latest_vocab_number(vocab_dir="data/vocab", lang="eng"):
     """
-    Find the largest number XXX in vocab-{lang}-XXX.tsv files.
+    Find the largest number XXX in vocab-{lang}-XXX.tsv files (XXX = vocab size in tokens).
     If none exist, return 0.
     """
     pattern = re.compile(rf"vocab-{re.escape(lang)}-(\d+)\.tsv$")
@@ -59,6 +59,7 @@ if not os.path.exists(VOCAB_FILE):
     print(f"❌ Input vocab file not found: {VOCAB_FILE}")
     sys.exit(1)
 
+# Files are named by vocab size in tokens: 256 byte tokens + merges
 VOCAB_OUT = f"data/vocab/vocab-{lang}-{latest_vocab + new_tokens}.tsv"
 
 # ---------- Load tokenizer ----------

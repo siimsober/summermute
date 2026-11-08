@@ -5,7 +5,7 @@ What to do next, in order. Decisions and results go in `project_journal.md`.
 ## Where we are
 
 - Data: clean eng (Simple Wikipedia + Gutenberg, 23.5 MB) and est (Wikipedia, 12 MB), with EOT segment markers.
-- Tokenizer: fast BPE, merges stay inside words (GPT-2 style), 256 merges per language.
+- Tokenizer: fast BPE, merges stay inside words (GPT-2 style). Vocab sizes in tokens: 768 used so far, 1256 built.
 - Model: 1 block, single-head attention, embed 64, context 256, ~110k params.
 - Training: no validation, "epoch" = every position (huge), saves only at the end.
 
@@ -85,4 +85,4 @@ Any time, small.
 - [ ] **One `find_latest_vocab_number`**: it is copied in three scripts, move it to `tokenizer.py`.
 - [ ] **Remove duplicate virtualenvs** (`.venv`, `.venv313`, `venv313`), keep one.
 - [ ] **`archive/`**: git history already keeps old versions; tag them and delete the folder.
-- [ ] **Delete leftovers**: `data/vocab/vocab-eng-256-crossword.tsv`, `data/vocab/old/`, old `models/summermute-*.pt`.
+- [ ] **Delete leftovers**: `data/vocab/vocab-eng-512-crossword.tsv`, `data/vocab/old/`, old `models/summermute-*.pt`.

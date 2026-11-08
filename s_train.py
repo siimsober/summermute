@@ -30,7 +30,7 @@ EXTRA_HOLDOUT_EVERY = 10   # every 10th story of the --extra file is held out fo
 # ---------- Vocab Finder ----------
 def find_latest_vocab_number(vocab_dir="data/vocab", lang="eng"):
     """
-    Find the largest number XXX in vocab-{lang}-XXX.tsv files.
+    Find the largest number XXX in vocab-{lang}-XXX.tsv files (XXX = vocab size in tokens).
     If none exist, return 0.
     """
     pattern = re.compile(rf"vocab-{re.escape(lang)}-(\d+)\.tsv$")
@@ -141,6 +141,9 @@ parser.add_argument("--init", help="start from this checkpoint's weights, with a
 parser.add_argument("--out", default="models", help="folder for checkpoints and log (default: models)")
 parser.add_argument("--layers", type=int, help=f"override n_layers (default {MODEL_CONFIG['n_layers']})")
 parser.add_argument("--heads", type=int, help=f"override n_heads (default {MODEL_CONFIG['n_heads']})")
+parser.add_argument("--embed", type=int, help=f"override embed_size (default {MODEL_CONFIG['embed_size']})")
+parser.add_argument("--vocab", type=int, help="vocab size in tokens, e.g. 768 for data/vocab/vocab-<lang>-768.tsv "
+                                              "(default: the largest one)")
 parser.add_argument("--lr", type=float, default=LR, help=f"peak learning rate (default {LR})")
 parser.add_argument("--warmup", type=int, default=WARMUP_STEPS, help=f"warmup steps (default {WARMUP_STEPS})")
 parser.add_argument("--eval-every", type=int, default=EVAL_EVERY, help=f"steps between evals (default {EVAL_EVERY})")
@@ -171,6 +174,8 @@ if args.layers:
     model_config["n_layers"] = args.layers
 if args.heads:
     model_config["n_heads"] = args.heads
+if args.embed:
+    model_config["embed_size"] = args.embed
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -182,8 +187,10 @@ if resume or args.init:
     print(f"✅ {'Resuming from ' + last_name if resume else 'Starting from weights of ' + args.init} "
           f"(step {checkpoint['step']})")
 else:
-    latest_num = find_latest_vocab_number("data/vocab", lang)
-    vocab_path = f"data/vocab/vocab-{lang}-{latest_num}.tsv"
+    vocab_num = args.vocab or find_latest_vocab_number("data/vocab", lang)
+    vocab_path = f"data/vocab/vocab-{lang}-{vocab_num}.tsv"
+if checkpoint and args.vocab:
+    print(f"⚠️ --vocab ignored: the checkpoint's vocab {vocab_path} is used")
 
 if not os.path.exists(vocab_path):
     print(f"❌ Error: No vocab file found at {vocab_path}")
