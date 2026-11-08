@@ -18,6 +18,17 @@ A small language model built from scratch to learn how LMs work, trained on Engl
 
 Newest first. Record what changed, why, and what was learned.
 
+### 2026-11-08 — Downloaded: TinyStories and Alpaca-est (not used yet)
+- `data/raw/tinystories/`: TinyStoriesV2-GPT4 train (2.23 GB, ~2.7M stories) and valid (22.5 MB,
+  27,630 stories) from Hugging Face `roneneldan/TinyStories`, licence CDLA-Sharing-1.0. Very simple
+  English stories, separated by `<|endoftext|>`, median 719 chars (~1 window). A few cp1252 control
+  chars (-) to fix; the train file ends mid-story.
+- `data/raw/alpaca-est/`: TartuNLP Alpaca-est (`alpaca_est.json`, 28.9 MB, 52,006 Estonian
+  instruction/input/output examples, generated with gpt-3.5-turbo; 17.5k have an input). Median
+  instruction 60 chars, output 281 chars: one example fits a 256-token window. **No licence** in the
+  repo: private use only, don't redistribute. Also the seed tasks and generation prompt.
+- For prompt/response training, the loss should later be computed on the response tokens only.
+
 **Naming convention (from 2026-11-08):** vocab sizes are total tokens, as is standard
 (256 byte tokens + merges). `vocab-est-768.tsv` = 768 tokens = 512 merges. Earlier entries were
 converted; model folder names like `v512-...` keep the old merge-count names.
