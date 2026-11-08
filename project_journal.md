@@ -18,6 +18,25 @@ A small language model built from scratch to learn how LMs work, trained on Engl
 
 Newest first. Record what changed, why, and what was learned.
 
+### 2026-11-08 — Final 20k-step models (`models/final-20k/`)
+- Recipe from all experiments so far: plain Wikipedia training, 2 layers x 2 heads, embed 64,
+  vocab 512 merges (768 tokens), 215k params, 20k steps, seed 1. ~26 min each on the GTX 980.
+
+| lang | val loss | bits/byte | vs 10k run (v512-2x64-2h) | train loss |
+|---|---|---|---|---|
+| est | 3.358 | **2.331** | 2.505 (−0.17) | 3.369 |
+| eng | 3.272 | **2.045** | 2.196 (−0.15) | 3.341 |
+
+- Best checkpoint is the last step for both: still improving at 20k. No overfitting even though
+  est saw its data ~120 times (train ≈ val).
+- est aabits held-out: 3.104 (Wikipedia-only 10k: 3.192).
+- Samples now have longer stretches of real words and grammar, still little meaning:
+  "However, the city couple of the law of life is nothing too, but in the same same time to philosophs."
+- Chat: `python sumerute.py eng --dir models/final-20k` (or `est`).
+- Next ideas: even longer runs (the curve hasn't flattened); bigger model (4 layers / embed 128)
+  now that training length is known to matter; aabits fine-tune (D recipe) on the est 20k model
+  for simple Estonian.
+
 ### 2026-11-08 — Controls for B-mem: it's mostly extra training, not the aabits
 - Same setup (est, 2x2, vocab 512), aabits held-out scored in every run. Bits per byte:
 

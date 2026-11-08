@@ -66,6 +66,7 @@ Goal: lower val loss. Change one thing at a time and record each result.
 ## 4. Vocab size
 
 - [ ] Train the same model with 256, 1k and 4k merges per language, compare **bits per byte**.
+      (256 vs 512 done: 512 better everywhere, see journal 2026-11-08.)
       Estonian (long words, many endings) will likely gain more from a bigger vocab than English.
 
 ## 5. More and broader data
