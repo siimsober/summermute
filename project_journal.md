@@ -18,6 +18,28 @@ A small language model built from scratch to learn how LMs work, trained on Engl
 
 Newest first. Record what changed, why, and what was learned.
 
+### 2026-11-08 — B-mem: memorize aabits first, then Wikipedia (surprise)
+- Phase 1: aabits only, 5000 steps (train loss 4.5 -> 0.36; held-out stories 3.11 -> 7.04 bits/byte,
+  i.e. memorized, not generalized). Phase 2: the last (memorized) weights, then 10k Wikipedia
+  steps with the same settings as B. Folders `models/exp-aabits/Bmem1`, `Bmem2`.
+
+| step | A2 (no aabits) | B (aabits 280 steps) | B-mem (aabits 5000 steps) |
+|---|---|---|---|
+| 250 | 5.211 | 4.756 | 4.806 |
+| 1000 | 4.247 | 4.212 | 4.174 |
+| 2000 | 4.077 | 4.065 | 3.887 |
+| 5000 | 3.809 | 3.784 | 3.589 |
+| 10000 | 3.624 | 3.626 | **3.493** |
+| final wiki bits/byte | 2.516 | 2.517 | **2.425** |
+| final aabits held-out | 3.192 | 3.191 | 3.066 |
+
+- −0.09 bits/byte on Wikipedia, ~9x the measured run-to-run noise, and the gap is still there at the
+  end. Contradicts the earlier "curriculum doesn't help" conclusion — the length of the first phase
+  matters. The user's intuition may be right.
+- Not yet ruled out: (1) B-mem simply had 5000 more optimizer steps in total; (2) it's not about
+  *simple* text but about memorizing any small text first; (3) one lucky run. Controls needed
+  before believing it.
+
 ### 2026-11-08 — Experiment: where to put the aabits (curriculum vs mixing vs fine-tuning)
 - All est, 2 layers x 2 heads, vocab 512. Scored on Wikipedia val and on 5 held-out aabits
   stories (every 10th, never trained on). Bits per byte, lower is better.
