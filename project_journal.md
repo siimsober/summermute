@@ -18,6 +18,14 @@ A small language model built from scratch to learn how LMs work, trained on Engl
 
 Newest first. Record what changed, why, and what was learned.
 
+### 2026-11-08 — Gutenberg children's books (100 MB) and `data_sources.md`
+- `download_gutenberg_children.py`: filters the Gutenberg catalog to English children's / young
+  adult bookshelves (6,930 books, ~2 GB in total) and downloads from the aleph mirror, one request
+  every 2 s, resumable. Stopped at `--max-mb 100` (default): only ~100 MB taken, in catalog order.
+  The rest can be fetched any time with a higher `--max-mb` (0 = all).
+- New `data_sources.md`: every data source in use, downloaded or known, with sizes, licences and
+  how much more is available. Keep it up to date when data changes.
+
 ### 2026-11-08 — Downloaded: TinyStories and Alpaca-est (not used yet)
 - `data/raw/tinystories/`: TinyStoriesV2-GPT4 train (2.23 GB, ~2.7M stories) and valid (22.5 MB,
   27,630 stories) from Hugging Face `roneneldan/TinyStories`, licence CDLA-Sharing-1.0. Very simple

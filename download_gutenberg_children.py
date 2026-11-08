@@ -2,6 +2,8 @@
 # Downloads all English Project Gutenberg books on children's / young adult bookshelves
 # from the aleph.gutenberg.org mirror (as Gutenberg asks for bulk downloads), politely:
 # one request every 2 seconds. Resumable: books already downloaded are skipped.
+# The full set is ~6,900 books / >1 GB; --max-mb stops once that much is on disk (default 100).
+import argparse
 import csv
 import os
 import time
@@ -12,6 +14,10 @@ OUT_DIR = "data/raw/gutenberg-children"
 CATALOG = f"{OUT_DIR}/pg_catalog.csv"   # https://www.gutenberg.org/cache/epub/feeds/pg_catalog.csv
 TXT_DIR = f"{OUT_DIR}/txt"
 DELAY = 2.0
+
+parser = argparse.ArgumentParser(description="Download Gutenberg children's books")
+parser.add_argument("--max-mb", type=float, default=100, help="stop when this many MB are downloaded (0 = all)")
+args = parser.parse_args()
 
 
 def is_children(shelves):
@@ -44,7 +50,11 @@ with open(f"{OUT_DIR}/children_books.csv", "w", encoding="utf-8", newline="") as
 print(f"{len(books)} English children's / young adult books in the catalog")
 
 done = failed = skipped = 0
+total_bytes = sum(os.path.getsize(os.path.join(TXT_DIR, n)) for n in os.listdir(TXT_DIR))
 for i, b in enumerate(books, 1):
+    if args.max_mb and total_bytes >= args.max_mb * 1e6:
+        print(f"Reached {total_bytes / 1e6:.0f} MB limit (--max-mb {args.max_mb:g}), stopping at book {i}/{len(books)}")
+        break
     book_id = b["Text#"]
     out = f"{TXT_DIR}/{book_id}.txt"
     if os.path.exists(out):
@@ -68,9 +78,11 @@ for i, b in enumerate(books, 1):
     else:
         with open(out, "wb") as f:
             f.write(data)
+        total_bytes += len(data)
         done += 1
     if i % 50 == 0:
-        print(f"{i}/{len(books)}: {done} downloaded, {skipped} already there, {failed} failed")
+        print(f"{i}/{len(books)}: {done} downloaded, {skipped} already there, {failed} failed, "
+              f"{total_bytes / 1e6:.0f} MB")
     time.sleep(DELAY)
 
 print(f"🎉 Finished: {done} downloaded, {skipped} already there, {failed} failed")
